@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.*
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Node
+node_modules/
+coverage/
+.next/
