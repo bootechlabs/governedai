@@ -27,13 +27,22 @@ Live at https://claude.ai/code/artifact/8ff68103-6db7-4320-a2f3-459f73532120 ("W
 
 Next: share the link from LinkedIn content (see below); when volume or reliability becomes a bottleneck, connect a real form/CRM backend (Jotform, Cognito Forms, SurveyMonkey, or HubSpot — see connector list below) and move lead capture off mailto.
 
+## Website — BUILT, deploying to governedai.co (GoDaddy)
+
+Domain is **governedai.co** (correction — not .com), registered/DNS-managed on **GoDaddy**. Hosting: GitHub Pages, served from a dedicated orphan `gh-pages` branch on github.com/bootechlabs/governedai containing only `index.html` + `CNAME` — deliberately isolated from `main` so internal planning docs (this file included) never get served publicly.
+
+Site content is the fuller single-page version per the original plan: company/problem framing (market-growth and audit-readiness-gap stats, sourced), the thesis quote, the live 20-question assessment, and a persistent "Book a conversation" CTA (mailto to bootech.labs@gmail.com) in the nav and hero. Same design system as the claude.ai artifact version, but as a fully standalone HTML document (own doctype/head) since it's not running inside the Artifact viewer — the report-download button was also given a plain-browser fallback (blob download) since the artifact-only sandboxed downloads capability isn't present on a real site.
+
+Status: `gh-pages` branch pushed to GitHub (commit fixing the .com→.co correction is one commit ahead locally as of this writing — Tony to `git push`). Remaining steps, all outside this session's reach (GoDaddy DNS + GitHub repo settings, neither of which this session has credentials for):
+1. Enable GitHub Pages in repo settings → Source: gh-pages branch, `/` root.
+2. In GoDaddy DNS for governedai.co: four A records on `@` → `185.199.108.153` / `.109.153` / `.110.153` / `.111.153`; optionally AAAA records → `2606:50c0:8000::153` / `:8001::153` / `:8002::153` / `:8003::153`; CNAME for `www` → `bootechlabs.github.io`. Also check GoDaddy's default domain forwarding/parking isn't overriding DNS.
+3. Enter `governedai.co` as the custom domain in GitHub Pages settings, wait for DNS verification, enable "Enforce HTTPS."
+
+Open item: the claude.ai artifact (link above) and governedai.co are now two separate files that will drift if only one is updated — decide whether the artifact stays as a quick-share/preview copy or gets retired once the domain is confirmed live.
+
 ## Phase 0/1 (parallel, ongoing): authority content over cold outreach
 
 Replace the plan's "20–30 live buyer interviews" with a content-driven funnel better suited to one person's bandwidth: 2–3 LinkedIn posts/week drafted by Claude, built around the plan's sharpest insight ("tools are built for engineers, buyers are compliance") plus real findings from the assessment tool as they accumulate. Founder posts under their own name (no auto-posting — voice/trust matters here; revisit whether this should be a Bootech-branded account per the ownership correction above). Every post links to the assessment. No native LinkedIn/X posting connector found in the registry as of this writing — posting stays manual; content generation and performance analysis (Similarweb, OpenRush) don't.
-
-## Website
-
-Single page: problem framing, the assessment, a booking link. Candidate connectors: Webflow, WordPress.com, B12 website generator, or Claude-built + Netlify-hosted. Hold off on a full marketing site until there's traction to show. Contact/ownership on the site should match the Bootech branding above.
 
 ## Targeted outreach (sparing, surgical)
 
@@ -54,9 +63,10 @@ Once real assessment data, design-partner conversations, and response numbers ex
 ## Connector options surfaced (none installed as of this writing)
 
 - Surveys/forms: SurveyMonkey, Jotform, Cognito Forms
-- Website/CMS: Webflow, WordPress.com, B12, Netlify
+- Website/CMS: Webflow, WordPress.com, B12, Netlify (not needed in the end — went with GitHub Pages, already in the stack)
 - Prospecting/enrichment: Crustdata, Vibe Prospecting
 - CRM/email: HubSpot, Attio, Mailchimp
 - SEO/traffic: OpenRush, Similarweb
+- Hosting (considered): Netlify, Vercel, Cloudflare Developer Platform, Macaly — none installed; GitHub Pages chosen instead since it needed no new connector/account
 - No direct social-media posting connector found — posting remains manual by design (voice/trust).
 - No GitHub connector found in the registry (checked twice) — repo access from Cowork would need the "add_repo" grant mentioned in a 403 response, which isn't self-serviceable from chat as of this writing.
