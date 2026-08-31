@@ -1,0 +1,1047 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GovernedAI — Audit-Ready Governance for Enterprise AI</title>
+<meta name="description" content="GovernedAI is Bootech's audit-ready governance platform for enterprise AI, starting with healthcare. Take the free 5-minute AI governance readiness check.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="GovernedAI — Audit-Ready Governance for Enterprise AI">
+<meta property="og:description" content="A free 5-minute AI governance readiness check for healthcare and regulated-industry teams, from Bootech.">
+<meta property="og:url" content="https://governedai.com/">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231F6F63'/%3E%3Cpath d='M16 6l9 3.4v6.2c0 6.2-3.9 10.9-9 12.4-5.1-1.5-9-6.2-9-12.4V9.4L16 6z' fill='none' stroke='%23F6FAF9' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M12 16.2l3 3 5.5-6' fill='none' stroke='%23F6FAF9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    color-scheme: light;
+    --paper:#F1F3F1;
+    --paper-raised:#FBFCFA;
+    --ink:#14201E;
+    --ink-soft:#2B3532;
+    --muted:#5B655F;
+    --line:#D9DBD3;
+    --line-strong:#C3C7BE;
+    --accent:#1F6F63;
+    --accent-strong:#14524A;
+    --accent-wash:rgba(31,111,99,0.10);
+    --accent-wash-strong:rgba(31,111,99,0.20);
+    --good:#0ca30c;
+    --warning:#fab219;
+    --serious:#ec835a;
+    --critical:#d03b3b;
+    --on-chip-dark:#14201E;
+    --on-chip-light:#F6FAF9;
+    --focus:#14524A;
+    --font-display:"IBM Plex Serif", Georgia, "Times New Roman", serif;
+    --font-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --font-mono:"IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme: dark;
+      --paper:#12181A;
+      --paper-raised:#182220;
+      --ink:#E7EBE7;
+      --ink-soft:#C7D0CB;
+      --muted:#93A29B;
+      --line:#263230;
+      --line-strong:#34423F;
+      --accent:#4FB3A3;
+      --accent-strong:#78CFC0;
+      --accent-wash:rgba(79,179,163,0.14);
+      --accent-wash-strong:rgba(79,179,163,0.26);
+      --focus:#78CFC0;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --paper:#12181A;
+    --paper-raised:#182220;
+    --ink:#E7EBE7;
+    --ink-soft:#C7D0CB;
+    --muted:#93A29B;
+    --line:#263230;
+    --line-strong:#34423F;
+    --accent:#4FB3A3;
+    --accent-strong:#78CFC0;
+    --accent-wash:rgba(79,179,163,0.14);
+    --accent-wash-strong:rgba(79,179,163,0.26);
+    --focus:#78CFC0;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    line-height:1.5;
+  }
+  a{color:var(--accent);}
+  :focus-visible{outline:2px solid var(--focus); outline-offset:2px;}
+  h1,h2,h3{font-family:var(--font-display); font-weight:600; text-wrap:balance; margin:0;}
+  .mono{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+  .muted{color:var(--muted);}
+
+  #app{max-width:760px; margin:0 auto; padding:0 20px 96px;}
+  .brand{
+    font-family:var(--font-mono); font-weight:600; font-size:13px;
+    letter-spacing:0.06em; text-transform:uppercase; color:var(--accent);
+  }
+  .brand span{color:var(--muted); font-weight:400; text-transform:none; letter-spacing:0;}
+
+  /* ---- ledger progress bar ---- */
+  .ledger{
+    position:sticky; top:0; z-index:5;
+    background:var(--paper); border-bottom:1px solid var(--line);
+    padding:14px 0 12px; margin-bottom:28px;
+    backdrop-filter:saturate(1.1);
+  }
+  .ledger-row{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:10px;}
+  .ledger-step{font-family:var(--font-mono); font-size:13px; color:var(--muted); white-space:nowrap;}
+  .ledger-step b{color:var(--ink); font-weight:600;}
+  .ledger-dim{font-size:13px; font-weight:600; text-align:right;}
+  .ticks{display:grid; grid-auto-flow:column; gap:3px;}
+  .tick{height:4px; border-radius:2px; background:var(--line-strong);}
+  .tick.done{background:var(--accent);}
+  .tick.current{background:var(--ink-soft);}
+
+  /* ---- intro ---- */
+  .intro{padding-top:6px;}
+  .eyebrow{
+    font-family:var(--font-mono); font-size:12px; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--accent); margin-bottom:14px;
+  }
+  .intro h1{font-size:clamp(28px,4.4vw,40px); line-height:1.15; margin-bottom:18px; max-width:16ch;}
+  .intro .lede{font-size:17px; color:var(--ink-soft); max-width:56ch; margin-bottom:22px;}
+  blockquote.thesis{
+    margin:26px 0; padding:4px 0 4px 20px; border-left:3px solid var(--accent);
+    font-family:var(--font-display); font-style:italic; font-size:19px;
+    color:var(--ink); max-width:48ch;
+  }
+  .meta-row{display:flex; flex-wrap:wrap; gap:18px; margin:26px 0; font-size:13px; color:var(--muted);}
+  .meta-row .item{display:flex; align-items:center; gap:7px;}
+  .meta-row .dot{width:5px; height:5px; border-radius:50%; background:var(--accent);}
+  .dims-preview{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+    gap:10px; margin:22px 0 30px;
+  }
+  .dims-preview .card{
+    border:1px solid var(--line); border-radius:3px; padding:12px 13px;
+    background:var(--paper-raised);
+  }
+  .dims-preview .code{font-family:var(--font-mono); font-size:12px; color:var(--accent); font-weight:600;}
+  .dims-preview .name{font-size:13.5px; font-weight:600; margin-top:3px;}
+
+  /* ---- buttons ---- */
+  .btn{
+    font-family:var(--font-body); font-weight:600; font-size:15px;
+    padding:13px 22px; border-radius:3px; border:1px solid transparent;
+    cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+    transition:background-color .15s ease, border-color .15s ease, color .15s ease;
+  }
+  @media (prefers-reduced-motion: reduce){ .btn{transition:none;} }
+  .btn-primary{background:var(--accent); color:#F6FAF9; border-color:var(--accent);}
+  .btn-primary:hover{background:var(--accent-strong); border-color:var(--accent-strong);}
+  .btn-primary:disabled{background:var(--line-strong); border-color:var(--line-strong); color:var(--muted); cursor:not-allowed;}
+  .btn-ghost{background:transparent; color:var(--ink); border-color:var(--line-strong);}
+  .btn-ghost:hover{border-color:var(--ink-soft);}
+  .btn-text{background:transparent; color:var(--accent); border:none; padding:8px 4px; font-size:14px;}
+
+  /* ---- questions ---- */
+  .q-code{font-family:var(--font-mono); font-size:12px; color:var(--accent); font-weight:600; margin-bottom:8px;}
+  .q-card{margin-bottom:34px;}
+  .q-card h2{font-size:19px; font-weight:600; font-family:var(--font-body); line-height:1.35; margin-bottom:16px; max-width:52ch;}
+  .options{display:flex; flex-direction:column; gap:8px;}
+  .option{
+    display:flex; align-items:flex-start; gap:12px;
+    border:1px solid var(--line); border-radius:3px; padding:12px 14px;
+    cursor:pointer; background:var(--paper-raised);
+    transition:border-color .15s ease, background-color .15s ease;
+  }
+  @media (prefers-reduced-motion: reduce){ .option{transition:none;} }
+  .option:hover{border-color:var(--accent);}
+  .option input{margin-top:3px; accent-color:var(--accent); width:16px; height:16px; flex:none;}
+  .option.selected{border-color:var(--accent); background:var(--accent-wash);}
+  .option .otext{font-size:14.5px; color:var(--ink-soft);}
+  .option.selected .otext{color:var(--ink); font-weight:500;}
+
+  .step-actions{display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:18px; border-top:1px solid var(--line);}
+
+  /* ---- results ---- */
+  .score-block{
+    display:flex; flex-wrap:wrap; align-items:flex-end; gap:22px;
+    padding:26px 0 6px; border-bottom:1px solid var(--line); margin-bottom:26px;
+  }
+  .score-num{font-family:var(--font-mono); font-size:64px; font-weight:600; line-height:1;}
+  .score-num small{font-size:22px; color:var(--muted); font-weight:500;}
+  .band-chip{
+    display:inline-flex; align-items:center; gap:7px; padding:7px 13px;
+    border-radius:20px; font-size:13px; font-weight:600; font-family:var(--font-mono);
+  }
+  .band-chip .dot{width:8px; height:8px; border-radius:50%; background:currentColor;}
+  .narrative{font-size:16px; color:var(--ink-soft); max-width:58ch; margin:6px 0 0;}
+  .context-note{font-size:12.5px; color:var(--muted); margin-top:14px; max-width:58ch;}
+
+  .section-title{
+    font-family:var(--font-mono); font-size:12px; text-transform:uppercase;
+    letter-spacing:0.08em; color:var(--muted); margin:38px 0 16px;
+  }
+
+  .radar-grid{display:flex; flex-wrap:wrap; gap:28px; align-items:flex-start; margin-bottom:8px;}
+  .radar-grid svg{max-width:320px; width:100%; height:auto; flex:none;}
+  .dim-bars{flex:1 1 260px; min-width:240px; display:flex; flex-direction:column; gap:14px;}
+  .dim-bar-row .top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; gap:8px;}
+  .dim-bar-row .dname{font-size:13.5px; font-weight:600;}
+  .dim-bar-row .dpct{font-family:var(--font-mono); font-size:13px;}
+  .track{height:8px; border-radius:4px; background:var(--line); overflow:hidden;}
+  .fill{height:100%; border-radius:4px;}
+
+  table.data-table{width:100%; border-collapse:collapse; margin-top:20px; font-size:13.5px;}
+  table.data-table caption{text-align:left; font-size:12px; color:var(--muted); margin-bottom:8px; font-family:var(--font-mono);}
+  table.data-table th, table.data-table td{text-align:left; padding:8px 10px; border-bottom:1px solid var(--line);}
+  table.data-table th{color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:0.04em;}
+  table.data-table td.num{font-family:var(--font-mono); text-align:right;}
+  .overflow-x{overflow-x:auto;}
+
+  .rec-card{
+    border:1px solid var(--line); border-left:3px solid var(--line-strong);
+    border-radius:3px; padding:16px 18px; margin-bottom:12px; background:var(--paper-raised);
+  }
+  .rec-card .rhead{display:flex; align-items:center; gap:10px; margin-bottom:6px; flex-wrap:wrap;}
+  .rec-card .rcode{font-family:var(--font-mono); font-size:12px; color:var(--muted);}
+  .rec-card .rname{font-weight:600; font-size:14.5px;}
+  .rec-card p{margin:0; font-size:14px; color:var(--ink-soft);}
+
+  .download-row{display:flex; gap:12px; flex-wrap:wrap; margin:22px 0 6px;}
+
+  .lead-panel{
+    margin-top:44px; border:1px solid var(--line); border-radius:4px;
+    padding:26px 24px; background:var(--paper-raised);
+  }
+  .lead-panel h3{font-size:20px; margin-bottom:8px;}
+  .lead-panel .sub{color:var(--muted); font-size:14px; margin-bottom:20px; max-width:56ch;}
+  .field-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;}
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field.full{grid-column:1 / -1;}
+  .field label{font-size:12.5px; font-weight:600; color:var(--ink-soft);}
+  .field input, .field select, .field textarea{
+    font-family:var(--font-body); font-size:14.5px; padding:10px 11px;
+    border:1px solid var(--line-strong); border-radius:3px; background:var(--paper);
+    color:var(--ink);
+  }
+  .field textarea{resize:vertical; min-height:64px;}
+  .field input:focus, .field select:focus, .field textarea:focus{border-color:var(--accent);}
+  .privacy-note{font-size:12px; color:var(--muted); margin-top:12px; display:flex; align-items:center; gap:6px;}
+
+  .confirm-panel{
+    margin-top:18px; padding:16px 18px; border-radius:3px;
+    border:1px solid var(--accent); background:var(--accent-wash);
+    font-size:13.5px;
+  }
+  .confirm-panel pre{
+    white-space:pre-wrap; font-family:var(--font-mono); font-size:12.5px;
+    background:var(--paper); border:1px solid var(--line); border-radius:3px;
+    padding:12px; margin:10px 0; color:var(--ink-soft);
+  }
+
+  footer.foot{margin-top:60px; padding-top:20px; border-top:1px solid var(--line); font-size:12.5px; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+
+  @media (max-width:520px){
+    .field-grid{grid-template-columns:1fr;}
+    .score-num{font-size:52px;}
+    .radar-grid svg{max-width:260px;}
+  }
+
+  /* ---- site shell: nav + expanded hero (governedai.com) ---- */
+  .site-nav{
+    max-width:760px; margin:0 auto; padding:22px 20px 0;
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+  }
+  .book-link{
+    font-family:var(--font-body); font-weight:600; font-size:13.5px;
+    color:var(--ink); text-decoration:none; white-space:nowrap;
+    border:1px solid var(--line-strong); border-radius:3px; padding:8px 14px;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .book-link:hover{border-color:var(--accent); color:var(--accent);}
+  .hero-sub{font-size:15.5px; color:var(--ink-soft); max-width:60ch; margin:0 0 24px;}
+  .stat-strip{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    gap:16px; margin:28px 0 30px;
+  }
+  .stat{border-left:2px solid var(--accent); padding:2px 0 2px 14px;}
+  .stat .num{font-family:var(--font-mono); font-size:23px; font-weight:600; display:block;}
+  .stat .label{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+  .stat .src{font-size:11px; color:var(--muted); display:block; margin-top:3px;}
+  .hero-ctas{display:flex; gap:12px; flex-wrap:wrap; margin:28px 0 6px;}
+  .hero-divider{max-width:760px; margin:44px auto 0; border:none; border-top:1px solid var(--line); padding:0 20px;}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="brand">GovernedAI <span>by Bootech</span></div>
+  <a class="book-link" href="mailto:bootech.labs@gmail.com?subject=Let%27s%20talk%20%E2%80%94%20GovernedAI">Book a conversation →</a>
+</nav>
+<div id="app"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- data ---------------- */
+
+  var LEVELS = 4; // options are indices 0..4 (5 levels)
+
+  var DIMENSIONS = [
+    {
+      key:"inventory", code:"D1", name:"AI Inventory & Discovery", short:"Inventory",
+      questions:[
+        {
+          text:"Do you have a current list of every AI system, model, or AI-enabled vendor tool used across the organization?",
+          options:[
+            "No — we'd have to ask around department by department",
+            "A partial list exists somewhere, but it's out of date",
+            "A spreadsheet exists, but it misses shadow AI and vendor-embedded tools",
+            "A maintained inventory exists, reviewed a few times a year",
+            "A living system of record tracks every AI system automatically"
+          ]
+        },
+        {
+          text:"Do you know which AI systems touch PHI or other regulated, sensitive data?",
+          options:[
+            "Not tracked at all",
+            "We'd have to check with each team individually",
+            "Known for our biggest systems, unclear for the rest",
+            "Documented for most systems, with occasional gaps",
+            "Every system is tagged by data sensitivity as a matter of course"
+          ]
+        },
+        {
+          text:"Do you know who inside the organization owns each AI system?",
+          options:[
+            "No — ownership isn't tracked",
+            "IT is the default owner for everything, by default",
+            "Business owners are known for major systems only",
+            "Most systems have a named business owner",
+            "Every system has a named, accountable owner on record"
+          ]
+        },
+        {
+          text:"Could you produce a complete list of AI vendors and embedded AI features within 48 hours if a customer or regulator asked?",
+          options:[
+            "No — it would take weeks",
+            "We'd scramble and still likely miss things",
+            "Possible, but it would pull several people off other work",
+            "Yes, with some manual compiling",
+            "Yes — it already exists and is ready to export"
+          ]
+        }
+      ]
+    },
+    {
+      key:"risk", code:"D2", name:"Risk Classification & Regulatory Mapping", short:"Risk Mapping",
+      questions:[
+        {
+          text:"Is each AI system classified by risk level (e.g., decision-support vs. automated decision, clinical vs. administrative)?",
+          options:[
+            "No classification exists",
+            "Only discussed informally, never documented",
+            "Done for high-visibility systems only",
+            "Most systems are classified using a defined method",
+            "Every system is classified consistently against defined criteria"
+          ]
+        },
+        {
+          text:"Do you map AI systems against relevant frameworks (NIST AI RMF, HIPAA/HITRUST, state AI laws, EU AI Act)?",
+          options:[
+            "Not mapped to any framework",
+            "Someone knows the frameworks, but nothing is documented",
+            "Mapped informally for a few flagship systems",
+            "Systematically mapped for most systems",
+            "Every system carries a current framework mapping"
+          ]
+        },
+        {
+          text:"Is there a defined level of required human oversight for each system, based on its risk?",
+          options:[
+            "No defined oversight requirements",
+            "Assumed case-by-case, never written down",
+            "Defined for the highest-risk systems only",
+            "Defined for most systems",
+            "Defined and enforced for every system by policy"
+          ]
+        },
+        {
+          text:"When a regulation or law changes, do you have a process to re-assess affected AI systems?",
+          options:[
+            "No process — we'd find out the hard way",
+            "We'd react, but with no defined process",
+            "An informal process exists, rarely exercised",
+            "A defined process exists and is generally followed",
+            "A defined, tested process triggers re-assessment automatically"
+          ]
+        }
+      ]
+    },
+    {
+      key:"workflow", code:"D3", name:"Governance Workflows", short:"Workflows",
+      questions:[
+        {
+          text:"Is there a required intake/approval process before a new AI system or use case goes live?",
+          options:[
+            "No — teams adopt AI tools on their own",
+            "Expected informally, rarely enforced",
+            "Required for some categories of tools",
+            "Required and mostly followed",
+            "Required, enforced, and tracked to completion every time"
+          ]
+        },
+        {
+          text:"Do legal, privacy, security, and (where relevant) clinical stakeholders formally review AI systems before approval?",
+          options:[
+            "No formal review by any of these groups",
+            "One group reviews, informally, sometimes",
+            "A couple of groups review higher-risk systems",
+            "Most relevant groups review most systems",
+            "All relevant stakeholders sign off, every time, on record"
+          ]
+        },
+        {
+          text:"Is there a documented exception process when a system doesn't fully meet policy?",
+          options:[
+            "No — exceptions just happen quietly",
+            "Handled ad hoc, undocumented",
+            "A process exists but isn't consistently used",
+            "A defined process is used for most exceptions",
+            "Every exception is documented, approved, and time-bound"
+          ]
+        },
+        {
+          text:"Are AI systems recertified or re-reviewed on a set schedule, not just at launch?",
+          options:[
+            "No — approval at launch is the only review",
+            "Re-review happens only if something goes wrong",
+            "Occasional re-review for a handful of systems",
+            "Most systems are recertified on a defined cadence",
+            "Every system is recertified on schedule, tracked to closure"
+          ]
+        }
+      ]
+    },
+    {
+      key:"evidence", code:"D4", name:"Evidence & Audit Trail", short:"Evidence",
+      questions:[
+        {
+          text:"For each AI system, can you produce documented evidence of approval, testing, and sign-off?",
+          options:[
+            "No documentation exists",
+            "Scattered across email and chat, hard to find",
+            "Exists for our most scrutinized systems",
+            "Exists for most systems, in a shared location",
+            "Maintained centrally and complete for every system"
+          ]
+        },
+        {
+          text:"Do you maintain a change log for each AI system (model swaps, prompt changes, vendor updates)?",
+          options:[
+            "No change tracking at all",
+            "Changes happen; nobody logs them",
+            "Logged inconsistently, by whoever remembers",
+            "Logged for most systems",
+            "Every material change is logged automatically or by policy"
+          ]
+        },
+        {
+          text:"If a customer sent you an AI security/compliance questionnaire today, how long would it take to respond?",
+          options:[
+            "Weeks — and we're not confident in the answers",
+            "1–2 weeks of scrambling across teams",
+            "About a week, gathering from multiple people",
+            "A few days — mostly organized already",
+            "Same day — from a maintained evidence repository"
+          ]
+        },
+        {
+          text:"Could you pass an internal or external AI governance audit with less than a week's notice?",
+          options:[
+            "No — not close",
+            "We'd fail on several systems",
+            "We'd pass on our best-run systems, fail on others",
+            "Likely pass, with some scrambling",
+            "Yes — confidently, with evidence ready to hand over"
+          ]
+        }
+      ]
+    },
+    {
+      key:"vendor", code:"D5", name:"Vendor & Third-Party Oversight", short:"Vendor Oversight",
+      questions:[
+        {
+          text:"Do you have a formal process for reviewing AI capabilities in vendor/SaaS tools before purchase or renewal?",
+          options:[
+            "No review process for AI specifically",
+            "Reviewed only if someone happens to ask",
+            "Reviewed for major purchases only",
+            "Reviewed for most new vendor relationships",
+            "Reviewed systematically at purchase and every renewal"
+          ]
+        },
+        {
+          text:"Do your vendor contracts address AI-specific terms (data usage, model training, liability, audit rights)?",
+          options:[
+            "Not addressed in our contracts",
+            "Standard boilerplate only, not AI-specific",
+            "Addressed for a handful of key vendors",
+            "Addressed in most new and renewed contracts",
+            "Standard AI terms required in every vendor contract"
+          ]
+        },
+        {
+          text:"Do you monitor whether existing vendors have added new AI features without your organization's review?",
+          options:[
+            "No monitoring — we'd find out from users",
+            "We'd only notice by accident",
+            "Occasionally checked for key vendors",
+            "Checked periodically across most vendors",
+            "Actively tracked, with vendors required to notify us"
+          ]
+        },
+        {
+          text:"If a key AI vendor had an incident (breach, bias finding, model failure), would you know how exposed you are within a day?",
+          options:[
+            "No — we wouldn't know where to start",
+            "It would take days to piece together",
+            "We could assess our biggest vendors quickly",
+            "We could assess most exposure within a day",
+            "Yes — exposure is mapped and ready to check anytime"
+          ]
+        }
+      ]
+    }
+  ];
+
+  var RECS = {
+    inventory:[
+      "Start with a single spreadsheet: name, owner, purpose, data touched. A rough first pass beats no visibility at all.",
+      "Formalize the spreadsheet into a maintained inventory, and assign someone to own keeping it current.",
+      "Close the shadow-AI gap — sweep vendor contracts and SaaS admin panels for AI features nobody flagged.",
+      "Move from a periodically-reviewed list to a system of record that owners update as things change.",
+      "Your inventory is a real asset — use it as the backbone for risk classification and vendor reviews."
+    ],
+    risk:[
+      "Pick one framework (NIST AI RMF is a reasonable default) and classify your five most-used AI systems against it first.",
+      "Write down the classification method you're using informally — consistency matters more than sophistication.",
+      "Extend classification past your highest-visibility systems; the risk often hides in the ones nobody's watching.",
+      "Add a trigger: when a law or framework updates, know which systems need re-classification.",
+      "Your framework mapping is a differentiator — it's exactly what procurement and audit teams ask for first."
+    ],
+    workflow:[
+      "Require one thing before any new AI tool goes live: a named owner and a one-line description of what it does.",
+      "Turn the informal expectation into a written intake step — even a simple form is enough to start.",
+      "Bring legal, privacy, and security into the same review, not sequential, siloed sign-offs.",
+      "Add scheduled recertification so approval isn't treated as a one-time event.",
+      "Your workflow is doing real work — document it so it survives you leaving the room."
+    ],
+    evidence:[
+      "Start a single evidence folder per AI system: approval email, test notes, sign-off — whatever exists today.",
+      "Standardize where evidence lives so it's not scattered across inboxes and chat threads.",
+      "Log changes, not just approvals — a model or prompt change without a record is a gap waiting to be found.",
+      "Time yourself: how long would a real customer questionnaire actually take right now? Fix what the answer reveals.",
+      "This is your strongest asset for sales conversations, not just audits — put it in front of procurement early."
+    ],
+    vendor:[
+      "Add one question to vendor onboarding: does this tool use AI, and how? Nothing fancy — just ask, every time.",
+      "Write the AI review into your existing vendor security review, rather than treating it as a separate track.",
+      "Push AI-specific terms (data use, training, audit rights) into contract templates for new and renewed deals.",
+      "Set a cadence to re-check existing vendors for AI features they've added since you last looked.",
+      "You're ahead of most peers here — this is worth a case study or a write-up in its own right."
+    ]
+  };
+
+  var OVERALL_NARRATIVE = [
+    "Right now, your AI governance would not hold up under scrutiny. That's more common than it feels — most organizations are earlier here than they'd like to admit. The fix starts with visibility, not policy.",
+    "You have pieces in place, but they're informal and person-dependent. If the person holding the knowledge left tomorrow, most of it would leave with them.",
+    "You're building real structure. The gap now is consistency — closing it for every system, not just the ones getting attention.",
+    "You'd likely survive an audit with some scrambling. The remaining work is making evidence and process automatic rather than effortful.",
+    "You're ahead of most organizations at this stage. The opportunity now is turning that readiness into a advantage with customers, partners, and regulators."
+  ];
+
+  var BAND_LABELS = ["Exposed","Reactive","Developing","Managed","Audit-Ready"];
+  var BAND_TIERS  = ["critical","serious","warning","good","good"];
+
+  function bandIndex(pct){
+    if (pct <= 20) return 0;
+    if (pct <= 40) return 1;
+    if (pct <= 60) return 2;
+    if (pct <= 80) return 3;
+    return 4;
+  }
+  function tierColorVar(tier){ return "var(--" + tier + ")"; }
+
+  /* ---------------- state ---------------- */
+
+  var state = {
+    screen:"intro", // intro | assess | results
+    step:0,
+    answers:{}, // dimKey -> [null,null,null,null]
+    lead:{sent:false}
+  };
+
+  DIMENSIONS.forEach(function(d){ state.answers[d.key] = [null,null,null,null]; });
+
+  function totalAnswered(){
+    var n=0;
+    DIMENSIONS.forEach(function(d){ state.answers[d.key].forEach(function(v){ if(v!==null) n++; }); });
+    return n;
+  }
+  function totalQuestions(){ return DIMENSIONS.length * 4; }
+
+  function dimPct(dimKey){
+    var vals = state.answers[dimKey];
+    var sum = 0, answered = 0;
+    vals.forEach(function(v){ if(v!==null){ sum += v; answered++; } });
+    if(answered===0) return 0;
+    return Math.round((sum / (vals.length * LEVELS)) * 100);
+  }
+  function overallPct(){
+    var sum=0, max=0;
+    DIMENSIONS.forEach(function(d){
+      state.answers[d.key].forEach(function(v){ max += LEVELS; if(v!==null) sum += v; });
+    });
+    return max ? Math.round((sum/max)*100) : 0;
+  }
+
+  /* ---------------- render helpers ---------------- */
+
+  function el(html){
+    var t = document.createElement("template");
+    t.innerHTML = html.trim();
+    return t.content.firstElementChild;
+  }
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  function renderLedger(){
+    if(state.screen!=="assess") return "";
+    var dim = DIMENSIONS[state.step];
+    var answeredInDim = state.answers[dim.key].filter(function(v){return v!==null;}).length;
+    var ticks = "";
+    DIMENSIONS.forEach(function(d, di){
+      d.questions.forEach(function(_, qi){
+        var cls = "tick";
+        if(di < state.step || (di===state.step && qi < answeredInDim)) cls += " done";
+        else if(di===state.step && qi===answeredInDim) cls += " current";
+        ticks += '<div class="'+cls+'"></div>';
+      });
+    });
+    return (
+      '<div class="ledger"><div id="app-inner-head">' +
+      '<div class="ledger-row">' +
+        '<div class="ledger-step mono">Section <b>'+(state.step+1)+'</b> / '+DIMENSIONS.length+'</div>' +
+        '<div class="ledger-dim">'+esc(dim.code)+' — '+esc(dim.name)+'</div>' +
+      '</div>' +
+      '<div class="ticks">'+ticks+'</div>' +
+      '</div></div>'
+    );
+  }
+
+  function renderIntro(){
+    var cards = DIMENSIONS.map(function(d){
+      return '<div class="card"><div class="code mono">'+d.code+'</div><div class="name">'+esc(d.name)+'</div></div>';
+    }).join("");
+    return (
+      '<div class="intro">' +
+        '<div class="eyebrow">AI Governance &amp; Compliance</div>' +
+        '<h1>Audit-ready governance for enterprise AI</h1>' +
+        '<p class="hero-sub">Enterprise AI adoption is outrunning governance. Companies are deploying models, copilots, and AI-enabled vendor tools faster than legal, security, and compliance teams can inventory, approve, and defend them. GovernedAI is Bootech&rsquo;s answer — starting with a free readiness check for healthcare and regulated-industry teams.</p>' +
+
+        '<div class="stat-strip">' +
+          '<div class="stat"><span class="num mono">30&ndash;45%</span><span class="label">projected CAGR of the AI governance software market</span><span class="src">Multiple market-sizing estimates, 2025&ndash;2026</span></div>' +
+          '<div class="stat"><span class="num mono">78%</span><span class="label">of executives lack confidence they&rsquo;d pass an AI governance audit within 90 days</span><span class="src">Grant Thornton, 2026</span></div>' +
+          '<div class="stat"><span class="num mono">&lt;25%</span><span class="label">of enterprises have a formal AI governance program today</span><span class="src">Industry survey data, 2025&ndash;2026</span></div>' +
+        '</div>' +
+
+        '<blockquote class="thesis">&ldquo;You don&rsquo;t have an AI model problem. You have an AI proof problem.&rdquo;</blockquote>' +
+
+        '<hr class="hero-divider" style="margin-left:0;margin-right:0;max-width:none;padding:0;">' +
+
+        '<div class="eyebrow" style="margin-top:34px;">See where you stand</div>' +
+        '<p class="lede">Twenty questions across five areas — inventory, risk classification, workflows, evidence, and vendor oversight. About five minutes. At the end, a scored readiness report with specific next steps for each area.</p>' +
+        '<div class="meta-row">' +
+          '<div class="item"><span class="dot"></span>~5 minutes</div>' +
+          '<div class="item"><span class="dot"></span>20 questions, 5 areas</div>' +
+          '<div class="item"><span class="dot"></span>Built for healthcare &amp; regulated-industry teams</div>' +
+        '</div>' +
+        '<div class="dims-preview">'+cards+'</div>' +
+        '<div class="hero-ctas">' +
+          '<button class="btn btn-primary" data-action="start">Start the free assessment →</button>' +
+          '<a class="btn btn-ghost" href="mailto:bootech.labs@gmail.com?subject=Let%27s%20talk%20%E2%80%94%20GovernedAI" style="text-decoration:none;">Book a conversation</a>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function renderAssess(){
+    var dim = DIMENSIONS[state.step];
+    var out = '<div class="assess-screen">';
+    dim.questions.forEach(function(q, qi){
+      var selected = state.answers[dim.key][qi];
+      out += '<div class="q-card">';
+      out += '<div class="q-code">'+dim.code+'.'+(qi+1)+'</div>';
+      out += '<h2>'+esc(q.text)+'</h2>';
+      out += '<div class="options" role="radiogroup">';
+      q.options.forEach(function(optText, oi){
+        var isSel = selected === oi;
+        out += '<label class="option'+(isSel?' selected':'')+'">' +
+          '<input type="radio" name="'+dim.key+'-'+qi+'" data-dim="'+dim.key+'" data-q="'+qi+'" data-val="'+oi+'" '+(isSel?'checked':'')+'>' +
+          '<span class="otext">'+esc(optText)+'</span>' +
+        '</label>';
+      });
+      out += '</div></div>';
+    });
+
+    var dimAnswered = state.answers[dim.key].every(function(v){return v!==null;});
+    var isFirst = state.step===0;
+    var isLast = state.step===DIMENSIONS.length-1;
+
+    out += '<div class="step-actions">';
+    out += isFirst
+      ? '<button class="btn btn-ghost" data-action="intro">← Back</button>'
+      : '<button class="btn btn-ghost" data-action="prev">← Back</button>';
+    out += '<button class="btn btn-primary" data-action="next" '+(dimAnswered?'':'disabled')+'>'+
+      (isLast ? "See my results →" : "Next section →") + '</button>';
+    out += '</div>';
+
+    out += '</div>';
+    return out;
+  }
+
+  function radarSVG(scores){
+    var size = 320, cx = size/2, cy = size/2 - 8, R = 108;
+    var n = scores.length;
+    function pt(i, r){
+      var angle = -Math.PI/2 + i*(2*Math.PI/n);
+      return [cx + r*Math.cos(angle), cy + r*Math.sin(angle)];
+    }
+    var rings = [0.25,0.5,0.75,1].map(function(f){
+      var pts = [];
+      for(var i=0;i<n;i++){ var p = pt(i, R*f); pts.push(p[0].toFixed(1)+","+p[1].toFixed(1)); }
+      return '<polygon points="'+pts.join(" ")+'" fill="none" stroke="var(--line)" stroke-width="1"/>';
+    }).join("");
+    var axes = "";
+    var labels = "";
+    for(var i=0;i<n;i++){
+      var p = pt(i, R);
+      axes += '<line x1="'+cx+'" y1="'+cy+'" x2="'+p[0].toFixed(1)+'" y2="'+p[1].toFixed(1)+'" stroke="var(--line)" stroke-width="1"/>';
+      var lp = pt(i, R+22);
+      var anchor = Math.abs(lp[0]-cx) < 4 ? "middle" : (lp[0] > cx ? "start" : "end");
+      labels += '<text x="'+lp[0].toFixed(1)+'" y="'+lp[1].toFixed(1)+'" text-anchor="'+anchor+'" dominant-baseline="middle" class="mono" font-size="11" fill="var(--muted)">'+esc(DIMENSIONS[i].code)+'</text>';
+    }
+    var dataPts = [];
+    var markers = "";
+    for(var j=0;j<n;j++){
+      var r = R * (scores[j]/100);
+      var p2 = pt(j, r);
+      dataPts.push(p2[0].toFixed(1)+","+p2[1].toFixed(1));
+      var tier = BAND_TIERS[bandIndex(scores[j])];
+      markers += '<circle cx="'+p2[0].toFixed(1)+'" cy="'+p2[1].toFixed(1)+'" r="4.5" fill="'+tierColorVar(tier)+'" stroke="var(--paper)" stroke-width="1.5"/>';
+    }
+    return (
+      '<svg viewBox="0 0 '+size+' '+size+'" role="img" aria-label="Maturity radar across five governance dimensions">' +
+      rings + axes +
+      '<polygon points="'+dataPts.join(" ")+'" fill="var(--accent-wash-strong)" stroke="var(--accent)" stroke-width="2"/>' +
+      markers + labels +
+      '</svg>'
+    );
+  }
+
+  // Fixed per-tier text color for legibility on the fixed (non-themed) status
+  // fills: critical is dark enough for white text (4.8:1); the other three
+  // are light/mid hues where a dark ink reads far better than white.
+  var CHIP_TEXT = {critical:"var(--on-chip-light)", serious:"var(--on-chip-dark)", warning:"var(--on-chip-dark)", good:"var(--on-chip-dark)"};
+
+  function bandChipHTML(idx, size){
+    var tier = BAND_TIERS[idx];
+    var label = BAND_LABELS[idx];
+    return '<span class="band-chip" style="background:'+tierColorVar(tier)+';color:'+CHIP_TEXT[tier]+';'+(size==="lg"?"font-size:14px;padding:9px 16px;":"")+'"><span class="dot"></span>'+esc(label)+'</span>';
+  }
+
+  function renderResults(){
+    var overall = overallPct();
+    var oi = bandIndex(overall);
+    var scores = DIMENSIONS.map(function(d){ return dimPct(d.key); });
+
+    var bars = DIMENSIONS.map(function(d, i){
+      var pct = scores[i];
+      var tier = BAND_TIERS[bandIndex(pct)];
+      return (
+        '<div class="dim-bar-row">' +
+          '<div class="top"><span class="dname">'+esc(d.code)+' · '+esc(d.short)+'</span><span class="dpct mono">'+pct+'%</span></div>' +
+          '<div class="track"><div class="fill" style="width:'+pct+'%;background:'+tierColorVar(tier)+';"></div></div>' +
+        '</div>'
+      );
+    }).join("");
+
+    var tableRows = DIMENSIONS.map(function(d,i){
+      var pct = scores[i];
+      var bi = bandIndex(pct);
+      return '<tr><td>'+esc(d.code)+' — '+esc(d.name)+'</td><td class="num mono">'+pct+'%</td><td>'+esc(BAND_LABELS[bi])+'</td></tr>';
+    }).join("");
+
+    var recCards = DIMENSIONS.map(function(d,i){
+      var pct = scores[i];
+      var bi = bandIndex(pct);
+      var tier = BAND_TIERS[bi];
+      return (
+        '<div class="rec-card" style="border-left-color:'+tierColorVar(tier)+';">' +
+          '<div class="rhead"><span class="rcode mono">'+esc(d.code)+'</span><span class="rname">'+esc(d.name)+'</span>'+bandChipHTML(bi)+'</div>' +
+          '<p>'+esc(RECS[d.key][bi])+'</p>' +
+        '</div>'
+      );
+    }).join("");
+
+    var leadPanel = state.lead.sent ? leadConfirmHTML() : leadFormHTML();
+
+    return (
+      '<div class="results-screen">' +
+        '<div class="score-block">' +
+          '<div class="score-num mono">'+overall+'<small>/100</small></div>' +
+          '<div>' + bandChipHTML(oi, "lg") + '</div>' +
+        '</div>' +
+        '<p class="narrative">'+esc(OVERALL_NARRATIVE[oi])+'</p>' +
+        '<p class="context-note">For context: a 2026 Grant Thornton survey found most business executives lack strong confidence they could pass an independent AI governance audit within 90 days. This score is a self-assessment, not a certification — it&rsquo;s meant to show you where to look first.</p>' +
+
+        '<div class="section-title">Maturity by dimension</div>' +
+        '<div class="radar-grid">' +
+          radarSVG(scores) +
+          '<div class="dim-bars">'+bars+'</div>' +
+        '</div>' +
+        '<div class="overflow-x"><table class="data-table"><caption>Full breakdown (table view)</caption><thead><tr><th>Dimension</th><th>Score</th><th>Band</th></tr></thead><tbody>'+tableRows+'</tbody></table></div>' +
+
+        '<div class="section-title">Where to focus next</div>' +
+        recCards +
+
+        '<div class="download-row">' +
+          '<button class="btn btn-ghost" data-action="download" id="dl-btn" hidden>⬇ Download my report</button>' +
+          '<button class="btn btn-ghost" data-action="restart">Retake the assessment</button>' +
+        '</div>' +
+
+        '<div id="lead-panel">' + leadPanel + '</div>' +
+
+        '<footer class="foot"><span>GovernedAI by Bootech — audit-ready governance for enterprise AI</span><span>Self-assessment, not a certification</span></footer>' +
+      '</div>'
+    );
+  }
+
+  function leadFormHTML(){
+    return (
+      '<div class="lead-panel">' +
+        '<h3>Want help closing these gaps?</h3>' +
+        '<p class="sub">Tell us a bit about your organization and we&rsquo;ll follow up directly with a walkthrough of your results — no automated drip, just a real conversation.</p>' +
+        '<form id="lead-form">' +
+          '<div class="field-grid">' +
+            '<div class="field"><label for="lf-name">Name</label><input id="lf-name" required></div>' +
+            '<div class="field"><label for="lf-email">Work email</label><input id="lf-email" type="email" required></div>' +
+            '<div class="field"><label for="lf-company">Company</label><input id="lf-company" required></div>' +
+            '<div class="field"><label for="lf-role">Role</label>' +
+              '<select id="lf-role">' +
+                '<option>Compliance / Privacy</option>' +
+                '<option>Security / CISO</option>' +
+                '<option>Legal</option>' +
+                '<option>CIO / CTO / Engineering</option>' +
+                '<option>Vendor / Third-Party Risk</option>' +
+                '<option>Other</option>' +
+              '</select>' +
+            '</div>' +
+            '<div class="field full"><label for="lf-org">Organization type</label>' +
+              '<select id="lf-org">' +
+                '<option>Digital health vendor / healthcare SaaS</option>' +
+                '<option>Hospital / health system</option>' +
+                '<option>Payer / RCM / healthcare-adjacent services</option>' +
+                '<option>Other regulated industry</option>' +
+                '<option>Other</option>' +
+              '</select>' +
+            '</div>' +
+            '<div class="field full"><label for="lf-pain">What&rsquo;s your biggest AI governance headache right now? (optional)</label><textarea id="lf-pain"></textarea></div>' +
+          '</div>' +
+          '<button class="btn btn-primary" type="submit">Send my results →</button>' +
+          '<div class="privacy-note">Sent directly by email — nothing here is stored on a server or shared with anyone else.</div>' +
+        '</form>' +
+      '</div>'
+    );
+  }
+
+  function leadConfirmHTML(){
+    return (
+      '<div class="lead-panel">' +
+        '<h3>Thanks — on its way.</h3>' +
+        '<p class="sub">Your email app should have opened with your results pre-filled. If nothing opened, copy the summary below and send it manually.</p>' +
+        '<div class="confirm-panel">' +
+          '<button class="btn btn-text" data-action="copy-summary">Copy summary to clipboard</button>' +
+          '<pre id="summary-pre"></pre>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  /* ---------------- report text (shared by mailto + download) ---------------- */
+
+  function buildReportText(leadInfo){
+    var overall = overallPct();
+    var oi = bandIndex(overall);
+    var lines = [];
+    lines.push("GOVERNEDAI — AI GOVERNANCE READINESS REPORT");
+    lines.push("Generated " + new Date().toISOString().slice(0,10));
+    if(leadInfo){
+      lines.push("");
+      lines.push("Name: " + leadInfo.name);
+      lines.push("Email: " + leadInfo.email);
+      lines.push("Company: " + leadInfo.company);
+      lines.push("Role: " + leadInfo.role);
+      lines.push("Organization type: " + leadInfo.org);
+    }
+    lines.push("");
+    lines.push("OVERALL SCORE: " + overall + "/100 — " + BAND_LABELS[oi]);
+    lines.push(OVERALL_NARRATIVE[oi]);
+    lines.push("");
+    lines.push("BY DIMENSION");
+    DIMENSIONS.forEach(function(d){
+      var pct = dimPct(d.key);
+      var bi = bandIndex(pct);
+      lines.push("- " + d.code + " " + d.name + ": " + pct + "% (" + BAND_LABELS[bi] + ")");
+      lines.push("  Next step: " + RECS[d.key][bi]);
+    });
+    if(leadInfo && leadInfo.pain){
+      lines.push("");
+      lines.push("BIGGEST CURRENT HEADACHE (self-reported)");
+      lines.push(leadInfo.pain);
+    }
+    lines.push("");
+    lines.push("This is a self-assessment, not a certification. — GovernedAI");
+    return lines.join("\n");
+  }
+
+  /* ---------------- render + bind ---------------- */
+
+  function render(){
+    var app = document.getElementById("app");
+    var html = "";
+    if(state.screen==="assess") html += renderLedger();
+    if(state.screen==="intro") html += renderIntro();
+    else if(state.screen==="assess") html += renderAssess();
+    else if(state.screen==="results") html += renderResults();
+    app.innerHTML = html;
+    window.scrollTo({top:0, behavior:"auto"});
+    wireDownloadButton();
+  }
+
+  // In the Claude Artifact viewer, downloads must go through the sandboxed
+  // downloads capability (a plain <a download>/blob save is inert there).
+  // On a normal site (governedai.com), window.claude never exists, so a
+  // regular blob download works fine — see the "download" action below.
+  var downloadsCap = null;
+  var inArtifactHost = !!(window.claude && window.claude.use);
+  if(inArtifactHost){
+    window.claude.use("downloads").then(function(cap){ downloadsCap = cap; wireDownloadButton(); });
+  }
+  function wireDownloadButton(){
+    var btn = document.getElementById("dl-btn");
+    if(!btn) return;
+    btn.hidden = inArtifactHost ? !downloadsCap : false;
+  }
+
+  document.addEventListener("change", function(e){
+    var t = e.target;
+    if(t.matches('input[type="radio"][data-dim]')){
+      var dim = t.getAttribute("data-dim");
+      var q = parseInt(t.getAttribute("data-q"), 10);
+      var val = parseInt(t.getAttribute("data-val"), 10);
+      state.answers[dim][q] = val;
+      render();
+    }
+  });
+
+  document.addEventListener("submit", function(e){
+    if(e.target.id === "lead-form"){
+      e.preventDefault();
+      var leadInfo = {
+        name: document.getElementById("lf-name").value.trim(),
+        email: document.getElementById("lf-email").value.trim(),
+        company: document.getElementById("lf-company").value.trim(),
+        role: document.getElementById("lf-role").value,
+        org: document.getElementById("lf-org").value,
+        pain: document.getElementById("lf-pain").value.trim()
+      };
+      if(!leadInfo.name || !leadInfo.email || !leadInfo.company) return;
+
+      var reportText = buildReportText(leadInfo);
+      var subject = "AI Governance Readiness — " + leadInfo.company + " (" + overallPct() + "/100)";
+      var mailto = "mailto:bootech.labs@gmail.com" +
+        "?subject=" + encodeURIComponent(subject) +
+        "&body=" + encodeURIComponent(reportText + "\n\nReply-to: " + leadInfo.email);
+
+      state.lead.sent = true;
+      state.lead.summary = reportText;
+      render();
+
+      var a = document.createElement("a");
+      a.href = mailto;
+      a.click();
+
+      var pre = document.getElementById("summary-pre");
+      if(pre) pre.textContent = reportText;
+    }
+  });
+
+  document.addEventListener("click", function(e){
+    var btn = e.target.closest("[data-action]");
+    if(!btn) return;
+    var action = btn.getAttribute("data-action");
+
+    if(action==="start"){ state.screen="assess"; state.step=0; render(); }
+    else if(action==="intro"){ state.screen="intro"; render(); }
+    else if(action==="prev"){ state.step = Math.max(0, state.step-1); render(); }
+    else if(action==="next"){
+      if(state.step < DIMENSIONS.length-1){ state.step++; render(); }
+      else { state.screen="results"; render(); }
+    }
+    else if(action==="restart"){
+      DIMENSIONS.forEach(function(d){ state.answers[d.key] = [null,null,null,null]; });
+      state.lead = {sent:false};
+      state.screen="intro"; state.step=0;
+      render();
+    }
+    else if(action==="download"){
+      var text = buildReportText(null);
+      if(inArtifactHost){
+        if(!downloadsCap) return;
+        downloadsCap.save({filename:"ai-governance-readiness-report.txt", data:text}).catch(function(){ /* declined or unavailable — no-op */ });
+      } else {
+        var blob = new Blob([text], {type:"text/plain"});
+        var url = URL.createObjectURL(blob);
+        var dlA = document.createElement("a");
+        dlA.href = url; dlA.download = "ai-governance-readiness-report.txt";
+        document.body.appendChild(dlA); dlA.click(); document.body.removeChild(dlA);
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      }
+    }
+    else if(action==="copy-summary"){
+      if(state.lead.summary && navigator.clipboard){
+        navigator.clipboard.writeText(state.lead.summary).catch(function(){});
+        btn.textContent = "Copied ✓";
+        setTimeout(function(){ btn.textContent = "Copy summary to clipboard"; }, 1800);
+      }
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
