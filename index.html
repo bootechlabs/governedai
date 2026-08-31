@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:title" content="GovernedAI — Audit-Ready Governance for Enterprise AI">
 <meta property="og:description" content="A free 5-minute AI governance readiness check for healthcare and regulated-industry teams, from Bootech.">
-<meta property="og:url" content="https://governedai.com/">
+<meta property="og:url" content="https://governedai.co/">
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231F6F63'/%3E%3Cpath d='M16 6l9 3.4v6.2c0 6.2-3.9 10.9-9 12.4-5.1-1.5-9-6.2-9-12.4V9.4L16 6z' fill='none' stroke='%23F6FAF9' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M12 16.2l3 3 5.5-6' fill='none' stroke='%23F6FAF9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
@@ -254,7 +254,7 @@
     .radar-grid svg{max-width:260px;}
   }
 
-  /* ---- site shell: nav + expanded hero (governedai.com) ---- */
+  /* ---- site shell: nav + expanded hero (governedai.co) ---- */
   .site-nav{
     max-width:760px; margin:0 auto; padding:22px 20px 0;
     display:flex; align-items:center; justify-content:space-between; gap:14px;
@@ -943,7 +943,7 @@
 
   // In the Claude Artifact viewer, downloads must go through the sandboxed
   // downloads capability (a plain <a download>/blob save is inert there).
-  // On a normal site (governedai.com), window.claude never exists, so a
+  // On a normal site (governedai.co), window.claude never exists, so a
   // regular blob download works fine — see the "download" action below.
   var downloadsCap = null;
   var inArtifactHost = !!(window.claude && window.claude.use);
