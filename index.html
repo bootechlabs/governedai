@@ -929,7 +929,11 @@
 
   /* ---------------- render + bind ---------------- */
 
-  function render(){
+  // toTop: pass true only on an actual screen/section change (start, back,
+  // next, restart). In-place updates — answering a question, submitting the
+  // lead form — must NOT jump the scroll position, or every click on a
+  // question re-scrolls the visitor to the top of the page.
+  function render(toTop){
     var app = document.getElementById("app");
     var html = "";
     if(state.screen==="assess") html += renderLedger();
@@ -937,7 +941,7 @@
     else if(state.screen==="assess") html += renderAssess();
     else if(state.screen==="results") html += renderResults();
     app.innerHTML = html;
-    window.scrollTo({top:0, behavior:"auto"});
+    if(toTop) window.scrollTo({top:0, behavior:"auto"});
     wireDownloadButton();
   }
 
@@ -963,7 +967,7 @@
       var q = parseInt(t.getAttribute("data-q"), 10);
       var val = parseInt(t.getAttribute("data-val"), 10);
       state.answers[dim][q] = val;
-      render();
+      render(false);
     }
   });
 
@@ -988,7 +992,7 @@
 
       state.lead.sent = true;
       state.lead.summary = reportText;
-      render();
+      render(false);
 
       var a = document.createElement("a");
       a.href = mailto;
@@ -1004,18 +1008,18 @@
     if(!btn) return;
     var action = btn.getAttribute("data-action");
 
-    if(action==="start"){ state.screen="assess"; state.step=0; render(); }
-    else if(action==="intro"){ state.screen="intro"; render(); }
-    else if(action==="prev"){ state.step = Math.max(0, state.step-1); render(); }
+    if(action==="start"){ state.screen="assess"; state.step=0; render(true); }
+    else if(action==="intro"){ state.screen="intro"; render(true); }
+    else if(action==="prev"){ state.step = Math.max(0, state.step-1); render(true); }
     else if(action==="next"){
-      if(state.step < DIMENSIONS.length-1){ state.step++; render(); }
-      else { state.screen="results"; render(); }
+      if(state.step < DIMENSIONS.length-1){ state.step++; render(true); }
+      else { state.screen="results"; render(true); }
     }
     else if(action==="restart"){
       DIMENSIONS.forEach(function(d){ state.answers[d.key] = [null,null,null,null]; });
       state.lead = {sent:false};
       state.screen="intro"; state.step=0;
-      render();
+      render(true);
     }
     else if(action==="download"){
       var text = buildReportText(null);
@@ -1040,7 +1044,7 @@
     }
   });
 
-  render();
+  render(true);
 })();
 </script>
 </body>
