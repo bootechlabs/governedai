@@ -1,14 +1,16 @@
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
-// TODO: replace with the real Auth.js session once sign-in UI exists.
-// Until then every action attributes to the seeded dev/admin user
-// (see prisma/seed.ts) so ownerId/actorId foreign keys have something real.
 export async function getCurrentUser() {
-  const user = await prisma.user.findFirst({ where: { role: "ADMIN" } });
+  const session = await auth();
+  if (!session?.user?.email) {
+    throw new Error("Not authenticated");
+  }
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
   if (!user) {
-    throw new Error(
-      "No user found — run `pnpm run db:seed` before using the app.",
-    );
+    throw new Error("Authenticated user has no matching User row");
   }
   return user;
 }

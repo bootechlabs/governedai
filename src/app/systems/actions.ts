@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import { DEFAULT_WORKFLOW_STAGES } from "@/lib/workflow";
+import { uploadEvidenceFile } from "@/lib/storage";
 import type { DataSensitivity, DeploymentStatus, StageStatus } from "@prisma/client";
 
 export async function createAiSystem(formData: FormData) {
@@ -84,4 +85,52 @@ export async function decideStage(stageId: string, formData: FormData) {
   });
 
   revalidatePath(`/systems/${stage.aiSystemId}`);
+}
+
+export async function attachEvidence(aiSystemId: string, formData: FormData) {
+  const label = String(formData.get("label") ?? "").trim() || null;
+  const linkUrl = String(formData.get("linkUrl") ?? "").trim();
+  const workflowStageId = String(formData.get("workflowStageId") ?? "") || null;
+  const file = formData.get("file");
+
+  const actor = await getCurrentUser();
+
+  let evidence;
+  if (file instanceof File && file.size > 0) {
+    const fileUrl = await uploadEvidenceFile(file);
+    evidence = await prisma.evidenceItem.create({
+      data: {
+        aiSystemId,
+        workflowStageId,
+        type: "FILE",
+        fileUrl,
+        label: label ?? file.name,
+        uploadedById: actor.id,
+      },
+    });
+  } else if (linkUrl) {
+    evidence = await prisma.evidenceItem.create({
+      data: {
+        aiSystemId,
+        workflowStageId,
+        type: "LINK",
+        linkUrl,
+        label,
+        uploadedById: actor.id,
+      },
+    });
+  } else {
+    throw new Error("Attach either a file or a link");
+  }
+
+  await prisma.auditLogEntry.create({
+    data: {
+      aiSystemId,
+      actorId: actor.id,
+      action: "evidence_attached",
+      detail: { evidenceId: evidence.id, type: evidence.type, label: evidence.label },
+    },
+  });
+
+  revalidatePath(`/systems/${aiSystemId}`);
 }

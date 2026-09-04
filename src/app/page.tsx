@@ -10,12 +10,20 @@ export default function Home() {
         App scaffold in progress. Evidence uploads and sign-in land next —
         see <code>docs/mvp-scope.md</code>.
       </p>
-      <Link
-        href="/systems"
-        className="rounded bg-black px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
-      >
-        View AI system inventory
-      </Link>
+      <div className="flex gap-3">
+        <Link
+          href="/systems"
+          className="rounded bg-black px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
+        >
+          View AI system inventory
+        </Link>
+        <Link
+          href="/sign-in"
+          className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
+        >
+          Sign in
+        </Link>
+      </div>
     </div>
   );
 }
