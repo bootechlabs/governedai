@@ -9,31 +9,44 @@ import { uploadEvidenceFile } from "@/lib/storage";
 import { logAuditEntry } from "@/lib/audit-log";
 import type { DataClassification, DeploymentStatus, StageStatus } from "@prisma/client";
 
-export async function createAiSystem(formData: FormData) {
+// An archived system is frozen — its workflow/evidence/audit history stays
+// reviewable, but nothing about it should keep changing underneath that
+// history. Enforced here (not just hidden in the UI) since a bound form
+// action can still be POSTed to directly.
+async function assertSystemEditable(aiSystemId: string) {
+  const system = await prisma.aiSystem.findUniqueOrThrow({ where: { id: aiSystemId } });
+  if (system.archivedAt) {
+    throw new Error("This AI system is archived — unarchive it before making changes.");
+  }
+  return system;
+}
+
+function parseAiSystemFields(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) {
     throw new Error("Name is required");
   }
-  const description = String(formData.get("description") ?? "").trim() || null;
-  const businessUnit = String(formData.get("businessUnit") ?? "").trim() || null;
-  const vendorName = String(formData.get("vendorName") ?? "").trim() || null;
-  const classification = String(
-    formData.get("classification") ?? "INTERNAL",
-  ) as DataClassification;
-  const deploymentStatus = String(
-    formData.get("deploymentStatus") ?? "PLANNED",
-  ) as DeploymentStatus;
+  return {
+    name,
+    description: String(formData.get("description") ?? "").trim() || null,
+    businessUnit: String(formData.get("businessUnit") ?? "").trim() || null,
+    vendorName: String(formData.get("vendorName") ?? "").trim() || null,
+    classification: String(
+      formData.get("classification") ?? "INTERNAL",
+    ) as DataClassification,
+    deploymentStatus: String(
+      formData.get("deploymentStatus") ?? "PLANNED",
+    ) as DeploymentStatus,
+  };
+}
 
+export async function createAiSystem(formData: FormData) {
+  const fields = parseAiSystemFields(formData);
   const owner = await getCurrentUser();
 
   const system = await prisma.aiSystem.create({
     data: {
-      name,
-      description,
-      businessUnit,
-      vendorName,
-      classification,
-      deploymentStatus,
+      ...fields,
       ownerId: owner.id,
       stages: {
         create: DEFAULT_WORKFLOW_STAGES.map((stage) => ({
@@ -48,11 +61,80 @@ export async function createAiSystem(formData: FormData) {
     aiSystemId: system.id,
     actorId: owner.id,
     action: "system_created",
-    detail: { name, classification, deploymentStatus },
+    detail: fields,
   });
 
   revalidatePath("/systems");
   redirect(`/systems/${system.id}`);
+}
+
+export async function updateAiSystem(aiSystemId: string, formData: FormData) {
+  const fields = parseAiSystemFields(formData);
+  const actor = await getCurrentUser();
+
+  const before = await assertSystemEditable(aiSystemId);
+
+  await prisma.aiSystem.update({ where: { id: aiSystemId }, data: fields });
+
+  await logAuditEntry({
+    aiSystemId,
+    actorId: actor.id,
+    action: "system_updated",
+    detail: {
+      before: {
+        name: before.name,
+        businessUnit: before.businessUnit,
+        vendorName: before.vendorName,
+        classification: before.classification,
+        deploymentStatus: before.deploymentStatus,
+      },
+      after: fields,
+    },
+  });
+
+  revalidatePath("/systems");
+  revalidatePath(`/systems/${aiSystemId}`);
+}
+
+export async function deleteAiSystem(aiSystemId: string) {
+  await getCurrentUser();
+  await prisma.aiSystem.delete({ where: { id: aiSystemId } });
+  revalidatePath("/systems");
+  redirect("/systems");
+}
+
+// Archiving (unlike delete) keeps workflow/evidence/audit history intact —
+// for a retired tool a client still needs to review later, not lose.
+export async function archiveAiSystem(aiSystemId: string) {
+  const actor = await getCurrentUser();
+  await prisma.aiSystem.update({
+    where: { id: aiSystemId },
+    data: { archivedAt: new Date() },
+  });
+  await logAuditEntry({
+    aiSystemId,
+    actorId: actor.id,
+    action: "system_archived",
+    detail: {},
+  });
+  revalidatePath("/systems");
+  revalidatePath(`/systems/${aiSystemId}`);
+}
+
+export async function unarchiveAiSystem(aiSystemId: string) {
+  const actor = await getCurrentUser();
+  await prisma.aiSystem.update({
+    where: { id: aiSystemId },
+    data: { archivedAt: null },
+  });
+  await logAuditEntry({
+    aiSystemId,
+    actorId: actor.id,
+    action: "system_unarchived",
+    detail: {},
+  });
+  revalidatePath("/systems");
+  revalidatePath(`/systems/${aiSystemId}`);
 }
 
 export async function decideStage(stageId: string, formData: FormData) {
@@ -63,6 +145,14 @@ export async function decideStage(stageId: string, formData: FormData) {
   }
 
   const actor = await getCurrentUser();
+
+  const existingStage = await prisma.workflowStage.findUniqueOrThrow({
+    where: { id: stageId },
+    include: { aiSystem: true },
+  });
+  if (existingStage.aiSystem.archivedAt) {
+    throw new Error("This AI system is archived — unarchive it before making changes.");
+  }
 
   const stage = await prisma.workflowStage.update({
     where: { id: stageId },
@@ -91,6 +181,7 @@ export async function attachEvidence(aiSystemId: string, formData: FormData) {
   const file = formData.get("file");
 
   const actor = await getCurrentUser();
+  await assertSystemEditable(aiSystemId);
 
   let evidence;
   if (file instanceof File && file.size > 0) {

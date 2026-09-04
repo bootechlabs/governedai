@@ -108,6 +108,7 @@ model AiSystem {
   deploymentStatus DeploymentStatus   @default(PLANNED)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
+  archivedAt       DateTime?
 
   owner   User   @relation("SystemOwner", fields: [ownerId], references: [id])
   ownerId String
