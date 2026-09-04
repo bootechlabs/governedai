@@ -14,7 +14,7 @@ function csvEscape(value: string) {
   return value;
 }
 
-export function buildAuditCsv(systemName: string, entries: AuditEntryWithActor[]) {
+export function buildAuditCsv(entries: AuditEntryWithActor[]) {
   const header = ["Timestamp", "Actor", "Action", "Detail"].join(",");
   const rows = entries.map((entry) =>
     [

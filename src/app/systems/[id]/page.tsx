@@ -3,6 +3,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { decideStage, attachEvidence } from "../actions";
 import { ClassificationBadge, DeploymentStatusBadge, StageStatusBadge } from "@/lib/badges";
+import { isStageActionable } from "@/lib/workflow";
+import { inputClass, primaryButtonClass, subtleLinkClass } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -62,16 +64,12 @@ export default async function SystemDetailPage({
                 {stage.decisionRationale}
               </p>
             )}
-            {stage.status === "PENDING" || stage.status === "IN_REVIEW" ? (
+            {isStageActionable(stage.status) ? (
               <form
                 action={decideStage.bind(null, stage.id)}
                 className="mt-3 flex flex-col gap-2 sm:flex-row"
               >
-                <select
-                  name="status"
-                  defaultValue="APPROVED"
-                  className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-                >
+                <select name="status" defaultValue="APPROVED" className={inputClass}>
                   <option value="IN_REVIEW">Move to in review</option>
                   <option value="APPROVED">Approve</option>
                   <option value="CONDITIONALLY_APPROVED">
@@ -82,12 +80,9 @@ export default async function SystemDetailPage({
                 <input
                   name="rationale"
                   placeholder="Decision rationale"
-                  className="flex-1 rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                  className={`flex-1 ${inputClass}`}
                 />
-                <button
-                  type="submit"
-                  className="rounded bg-black px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-black"
-                >
+                <button type="submit" className={primaryButtonClass}>
                   Record decision
                 </button>
               </form>
@@ -109,17 +104,10 @@ export default async function SystemDetailPage({
         <input
           name="linkUrl"
           placeholder="or paste a link"
-          className="flex-1 rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className={`flex-1 ${inputClass}`}
         />
-        <input
-          name="label"
-          placeholder="Label (optional)"
-          className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-        />
-        <button
-          type="submit"
-          className="rounded bg-black px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-black"
-        >
+        <input name="label" placeholder="Label (optional)" className={inputClass} />
+        <button type="submit" className={primaryButtonClass}>
           Attach
         </button>
       </form>
@@ -147,16 +135,10 @@ export default async function SystemDetailPage({
       <div className="mt-10 flex items-center justify-between">
         <h2 className="text-lg font-medium">Audit log</h2>
         <div className="flex gap-3 text-sm">
-          <a
-            href={`/systems/${system.id}/audit?format=csv`}
-            className="text-zinc-500 underline hover:no-underline"
-          >
+          <a href={`/systems/${system.id}/audit?format=csv`} className={subtleLinkClass}>
             Export CSV
           </a>
-          <a
-            href={`/systems/${system.id}/audit?format=pdf`}
-            className="text-zinc-500 underline hover:no-underline"
-          >
+          <a href={`/systems/${system.id}/audit?format=pdf`} className={subtleLinkClass}>
             Export PDF
           </a>
         </div>

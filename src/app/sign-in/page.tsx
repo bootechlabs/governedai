@@ -1,4 +1,5 @@
 import { signIn } from "@/auth";
+import { inputClass, primaryButtonClass } from "@/lib/ui";
 
 export default function SignInPage() {
   return (
@@ -22,12 +23,9 @@ export default function SignInPage() {
           name="email"
           placeholder="you@company.com"
           required
-          className="rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className={inputClass}
         />
-        <button
-          type="submit"
-          className="rounded bg-black px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
-        >
+        <button type="submit" className={primaryButtonClass}>
           Send magic link
         </button>
       </form>

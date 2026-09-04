@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import { DEFAULT_WORKFLOW_STAGES } from "@/lib/workflow";
 import { uploadEvidenceFile } from "@/lib/storage";
+import { logAuditEntry } from "@/lib/audit-log";
 import type { DataClassification, DeploymentStatus, StageStatus } from "@prisma/client";
 
 export async function createAiSystem(formData: FormData) {
@@ -43,13 +44,11 @@ export async function createAiSystem(formData: FormData) {
     },
   });
 
-  await prisma.auditLogEntry.create({
-    data: {
-      aiSystemId: system.id,
-      actorId: owner.id,
-      action: "system_created",
-      detail: { name, classification, deploymentStatus },
-    },
+  await logAuditEntry({
+    aiSystemId: system.id,
+    actorId: owner.id,
+    action: "system_created",
+    detail: { name, classification, deploymentStatus },
   });
 
   revalidatePath("/systems");
@@ -75,13 +74,11 @@ export async function decideStage(stageId: string, formData: FormData) {
     },
   });
 
-  await prisma.auditLogEntry.create({
-    data: {
-      aiSystemId: stage.aiSystemId,
-      actorId: actor.id,
-      action: "stage_transitioned",
-      detail: { stageId: stage.id, stageName: stage.stageName, status, rationale },
-    },
+  await logAuditEntry({
+    aiSystemId: stage.aiSystemId,
+    actorId: actor.id,
+    action: "stage_transitioned",
+    detail: { stageId: stage.id, stageName: stage.stageName, status, rationale },
   });
 
   revalidatePath(`/systems/${stage.aiSystemId}`);
@@ -123,13 +120,11 @@ export async function attachEvidence(aiSystemId: string, formData: FormData) {
     throw new Error("Attach either a file or a link");
   }
 
-  await prisma.auditLogEntry.create({
-    data: {
-      aiSystemId,
-      actorId: actor.id,
-      action: "evidence_attached",
-      detail: { evidenceId: evidence.id, type: evidence.type, label: evidence.label },
-    },
+  await logAuditEntry({
+    aiSystemId,
+    actorId: actor.id,
+    action: "evidence_attached",
+    detail: { evidenceId: evidence.id, type: evidence.type, label: evidence.label },
   });
 
   revalidatePath(`/systems/${aiSystemId}`);

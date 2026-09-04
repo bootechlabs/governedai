@@ -21,7 +21,7 @@ export async function GET(
   const fileBase = `${slugifyFileName(system.name)}-audit-log`;
 
   if (format === "csv") {
-    const csv = buildAuditCsv(system.name, system.auditLog);
+    const csv = buildAuditCsv(system.auditLog);
     return new NextResponse(csv, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",

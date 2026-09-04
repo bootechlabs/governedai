@@ -3,13 +3,13 @@ import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { createAiSystem } from "./actions";
 import { ClassificationBadge, DeploymentStatusBadge, StageStatusBadge } from "@/lib/badges";
+import { inputClass, primaryButtonClass } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
 const gridCols = "grid-cols-[2fr_1fr_1fr_150px_150px_1.8fr]";
 const cellClass = "px-3 py-2 flex items-center";
-const inputClass =
-  "w-full rounded border border-zinc-300 bg-transparent px-2 py-1 text-sm dark:border-zinc-700";
+const cellInputClass = `w-full ${inputClass}`;
 
 export default async function SystemsPage() {
   const systems = await prisma.aiSystem.findMany({
@@ -61,7 +61,7 @@ export default async function SystemsPage() {
               name="name"
               placeholder="New system name"
               required
-              className={inputClass}
+              className={cellInputClass}
             />
           </span>
           <span role="cell" className={cellClass}>
@@ -69,7 +69,7 @@ export default async function SystemsPage() {
               form="new-system-form"
               name="businessUnit"
               placeholder="Business unit"
-              className={inputClass}
+              className={cellInputClass}
             />
           </span>
           <span role="cell" className={cellClass}>
@@ -77,7 +77,7 @@ export default async function SystemsPage() {
               form="new-system-form"
               name="vendorName"
               placeholder="Vendor"
-              className={inputClass}
+              className={cellInputClass}
             />
           </span>
           <span role="cell" className={cellClass}>
@@ -85,7 +85,7 @@ export default async function SystemsPage() {
               form="new-system-form"
               name="classification"
               defaultValue="INTERNAL"
-              className={inputClass}
+              className={cellInputClass}
             >
               <option value="PUBLIC">Public</option>
               <option value="INTERNAL">Internal</option>
@@ -98,7 +98,7 @@ export default async function SystemsPage() {
               form="new-system-form"
               name="deploymentStatus"
               defaultValue="PLANNED"
-              className={inputClass}
+              className={cellInputClass}
             >
               <option value="PLANNED">Planned</option>
               <option value="PILOT">Pilot</option>
@@ -107,11 +107,7 @@ export default async function SystemsPage() {
             </select>
           </span>
           <span role="cell" className={cellClass}>
-            <button
-              form="new-system-form"
-              type="submit"
-              className="rounded bg-black px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-black"
-            >
+            <button form="new-system-form" type="submit" className={primaryButtonClass}>
               Add
             </button>
           </span>
