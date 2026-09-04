@@ -143,7 +143,23 @@ export default async function SystemDetailPage({
         ))}
       </ul>
 
-      <h2 className="mt-10 text-lg font-medium">Audit log</h2>
+      <div className="mt-10 flex items-center justify-between">
+        <h2 className="text-lg font-medium">Audit log</h2>
+        <div className="flex gap-3 text-sm">
+          <a
+            href={`/systems/${system.id}/audit?format=csv`}
+            className="text-zinc-500 underline hover:no-underline"
+          >
+            Export CSV
+          </a>
+          <a
+            href={`/systems/${system.id}/audit?format=pdf`}
+            className="text-zinc-500 underline hover:no-underline"
+          >
+            Export PDF
+          </a>
+        </div>
+      </div>
       <ul className="mt-4 flex flex-col gap-2 text-sm">
         {system.auditLog.length === 0 && (
           <li className="text-zinc-500">No activity yet.</li>
