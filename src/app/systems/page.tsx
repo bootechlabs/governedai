@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { createAiSystem } from "./actions";
 import { ClassificationBadge, DeploymentStatusBadge, StageStatusBadge } from "@/lib/badges";
@@ -142,10 +141,15 @@ export default async function SystemsPage() {
             <span role="cell" className={cellClass}>
               <DeploymentStatusBadge value={system.deploymentStatus} />
             </span>
-            <span role="cell" className={`${cellClass} gap-1.5`}>
+            <span role="cell" className={`${cellClass} gap-3`}>
               {system.stages.map((stage, i) => (
-                <span key={stage.id} className="flex items-center gap-1.5">
-                  {i > 0 && <ChevronRight size={12} className="text-zinc-400" />}
+                <span
+                  key={stage.id}
+                  className={`flex flex-col gap-0.5 ${i > 0 ? "border-l border-zinc-200 pl-3 dark:border-zinc-800" : ""}`}
+                >
+                  <span className="text-[10px] uppercase tracking-wide text-zinc-400">
+                    {stage.stageName}
+                  </span>
                   <StageStatusBadge value={stage.status} />
                 </span>
               ))}
