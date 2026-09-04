@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { FileSpreadsheet, FileText } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
   decideStage,
@@ -234,10 +235,18 @@ export default async function SystemDetailPage({
       <div className="mt-10 flex items-center justify-between">
         <h2 className="text-lg font-medium">Audit log</h2>
         <div className="flex gap-3 text-sm">
-          <a href={`/systems/${system.id}/audit?format=csv`} className={subtleLinkClass}>
+          <a
+            href={`/systems/${system.id}/audit?format=csv`}
+            className={`inline-flex items-center gap-1.5 ${subtleLinkClass}`}
+          >
+            <FileSpreadsheet size={14} />
             Export CSV
           </a>
-          <a href={`/systems/${system.id}/audit?format=pdf`} className={subtleLinkClass}>
+          <a
+            href={`/systems/${system.id}/audit?format=pdf`}
+            className={`inline-flex items-center gap-1.5 ${subtleLinkClass}`}
+          >
+            <FileText size={14} />
             Export PDF
           </a>
         </div>

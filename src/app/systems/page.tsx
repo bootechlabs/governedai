@@ -150,18 +150,27 @@ export default async function SystemsPage({
             role="row"
             className={`grid ${gridCols} border-b border-zinc-200 last:border-0 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900/60`}
           >
-            <span role="cell" className="flex flex-col justify-center px-3 py-2 font-medium">
+            <span
+              role="cell"
+              className="flex flex-col justify-center px-3 py-2 text-xs font-medium"
+            >
               {system.name}
               {system.archivedAt && (
-                <span className="text-xs font-normal text-zinc-500">
+                <span className="font-normal text-zinc-500">
                   Archived {system.archivedAt.toISOString().slice(0, 10)}
                 </span>
               )}
             </span>
-            <span role="cell" className={`${cellClass} text-zinc-600 dark:text-zinc-400`}>
+            <span
+              role="cell"
+              className={`${cellClass} text-xs text-zinc-600 dark:text-zinc-400`}
+            >
               {system.businessUnit ?? "—"}
             </span>
-            <span role="cell" className={`${cellClass} text-zinc-600 dark:text-zinc-400`}>
+            <span
+              role="cell"
+              className={`${cellClass} text-xs text-zinc-600 dark:text-zinc-400`}
+            >
               {system.vendorName ?? "—"}
             </span>
             <span role="cell" className={cellClass}>
