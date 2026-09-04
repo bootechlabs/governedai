@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { createAiSystem } from "./actions";
+import { ClassificationBadge, DeploymentStatusBadge, StageStatusBadge } from "@/lib/badges";
 
 export const dynamic = "force-dynamic";
 
-const gridCols = "grid-cols-[2fr_1fr_1fr_110px_120px_1.5fr]";
+const gridCols = "grid-cols-[2fr_1fr_1fr_150px_150px_1.8fr]";
 const cellClass = "px-3 py-2 flex items-center";
 const inputClass =
   "w-full rounded border border-zinc-300 bg-transparent px-2 py-1 text-sm dark:border-zinc-700";
@@ -23,7 +25,7 @@ export default async function SystemsPage() {
 
       <div
         role="table"
-        className="mt-6 min-w-[900px] overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800"
+        className="mt-6 min-w-[1000px] overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800"
       >
         <div
           role="row"
@@ -39,7 +41,7 @@ export default async function SystemsPage() {
             Vendor
           </span>
           <span role="columnheader" className={cellClass}>
-            Sensitivity
+            Classification
           </span>
           <span role="columnheader" className={cellClass}>
             Status
@@ -81,13 +83,14 @@ export default async function SystemsPage() {
           <span role="cell" className={cellClass}>
             <select
               form="new-system-form"
-              name="dataSensitivity"
-              defaultValue="NONE"
+              name="classification"
+              defaultValue="INTERNAL"
               className={inputClass}
             >
-              <option value="NONE">None</option>
-              <option value="PII">PII</option>
-              <option value="PHI">PHI</option>
+              <option value="PUBLIC">Public</option>
+              <option value="INTERNAL">Internal</option>
+              <option value="CONFIDENTIAL">Confidential</option>
+              <option value="RESTRICTED">Restricted</option>
             </select>
           </span>
           <span role="cell" className={cellClass}>
@@ -138,13 +141,18 @@ export default async function SystemsPage() {
               {system.vendorName ?? "—"}
             </span>
             <span role="cell" className={cellClass}>
-              {system.dataSensitivity}
+              <ClassificationBadge value={system.classification} />
             </span>
             <span role="cell" className={cellClass}>
-              {system.deploymentStatus}
+              <DeploymentStatusBadge value={system.deploymentStatus} />
             </span>
-            <span role="cell" className={`${cellClass} text-zinc-500`}>
-              {system.stages.map((s) => s.status).join(" → ")}
+            <span role="cell" className={`${cellClass} gap-1.5`}>
+              {system.stages.map((stage, i) => (
+                <span key={stage.id} className="flex items-center gap-1.5">
+                  {i > 0 && <ChevronRight size={12} className="text-zinc-400" />}
+                  <StageStatusBadge value={stage.status} />
+                </span>
+              ))}
             </span>
           </Link>
         ))}

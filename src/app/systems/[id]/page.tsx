@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { decideStage, attachEvidence } from "../actions";
+import { ClassificationBadge, DeploymentStatusBadge, StageStatusBadge } from "@/lib/badges";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +32,12 @@ export default async function SystemDetailPage({
       </Link>
 
       <h1 className="mt-2 text-2xl font-semibold tracking-tight">{system.name}</h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        Owner: {system.owner.name ?? system.owner.email} · {system.deploymentStatus}
-        {system.vendorName ? ` · Vendor: ${system.vendorName}` : ""}
-      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-500">
+        <span>Owner: {system.owner.name ?? system.owner.email}</span>
+        <DeploymentStatusBadge value={system.deploymentStatus} />
+        <ClassificationBadge value={system.classification} />
+        {system.vendorName && <span>Vendor: {system.vendorName}</span>}
+      </div>
       {system.description && (
         <p className="mt-3 text-sm text-zinc-700 dark:text-zinc-300">
           {system.description}
@@ -52,9 +55,7 @@ export default async function SystemDetailPage({
               <span className="font-medium">
                 {stage.sequence}. {stage.stageName}
               </span>
-              <span className="text-xs uppercase tracking-wide text-zinc-500">
-                {stage.status}
-              </span>
+              <StageStatusBadge value={stage.status} />
             </div>
             {stage.decisionRationale && (
               <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">

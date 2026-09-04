@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import { DEFAULT_WORKFLOW_STAGES } from "@/lib/workflow";
 import { uploadEvidenceFile } from "@/lib/storage";
-import type { DataSensitivity, DeploymentStatus, StageStatus } from "@prisma/client";
+import type { DataClassification, DeploymentStatus, StageStatus } from "@prisma/client";
 
 export async function createAiSystem(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
@@ -16,9 +16,9 @@ export async function createAiSystem(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim() || null;
   const businessUnit = String(formData.get("businessUnit") ?? "").trim() || null;
   const vendorName = String(formData.get("vendorName") ?? "").trim() || null;
-  const dataSensitivity = String(
-    formData.get("dataSensitivity") ?? "NONE",
-  ) as DataSensitivity;
+  const classification = String(
+    formData.get("classification") ?? "INTERNAL",
+  ) as DataClassification;
   const deploymentStatus = String(
     formData.get("deploymentStatus") ?? "PLANNED",
   ) as DeploymentStatus;
@@ -31,7 +31,7 @@ export async function createAiSystem(formData: FormData) {
       description,
       businessUnit,
       vendorName,
-      dataSensitivity,
+      classification,
       deploymentStatus,
       ownerId: owner.id,
       stages: {
@@ -48,7 +48,7 @@ export async function createAiSystem(formData: FormData) {
       aiSystemId: system.id,
       actorId: owner.id,
       action: "system_created",
-      detail: { name, dataSensitivity, deploymentStatus },
+      detail: { name, classification, deploymentStatus },
     },
   });
 

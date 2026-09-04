@@ -16,10 +16,11 @@ enum UserRole {
   CONTRIBUTOR
 }
 
-enum DataSensitivity {
-  NONE
-  PII
-  PHI
+enum DataClassification {
+  PUBLIC
+  INTERNAL
+  CONFIDENTIAL
+  RESTRICTED
 }
 
 enum DeploymentStatus {
@@ -98,15 +99,15 @@ model VerificationToken {
 }
 
 model AiSystem {
-  id               String           @id @default(cuid())
+  id               String             @id @default(cuid())
   name             String
   description      String?
   businessUnit     String?
   vendorName       String?
-  dataSensitivity  DataSensitivity  @default(NONE)
-  deploymentStatus DeploymentStatus @default(PLANNED)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  classification   DataClassification @default(INTERNAL)
+  deploymentStatus DeploymentStatus   @default(PLANNED)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
   owner   User   @relation("SystemOwner", fields: [ownerId], references: [id])
   ownerId String
