@@ -30,3 +30,16 @@ pnpm dev
 
 Requires a Postgres database (Neon or Supabase free tier both work) — set
 `DATABASE_URL` in `.env.local` before running `prisma migrate dev`.
+
+## Testing
+
+```bash
+pnpm test        # Vitest — pure logic (permissions, workflow, audit export)
+pnpm test:watch  # same, in watch mode
+pnpm test:e2e    # Playwright — auth-gate smoke tests, starts its own dev server
+```
+
+`test:e2e` only covers unauthenticated behavior (redirects, page rendering)
+for now — a real end-to-end flow through sign-in needs a test-only auth
+bypass, since Auth.js's magic-link flow can't be driven headlessly without
+one (see the comment in `src/auth.ts`).
