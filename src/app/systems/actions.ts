@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/current-user";
 import { DEFAULT_WORKFLOW_STAGES } from "@/lib/workflow";
 import { uploadEvidenceFile } from "@/lib/storage";
 import { logAuditEntry } from "@/lib/audit-log";
+import { canCreateSystem, canManageSystem, canDecideStage } from "@/lib/permissions";
 import type { DataClassification, DeploymentStatus, StageStatus } from "@prisma/client";
 
 // An archived system is frozen — its workflow/evidence/audit history stays
@@ -43,6 +44,9 @@ function parseAiSystemFields(formData: FormData) {
 export async function createAiSystem(formData: FormData) {
   const fields = parseAiSystemFields(formData);
   const owner = await getCurrentUser();
+  if (!canCreateSystem(owner.role)) {
+    throw new Error("Your role can't register new AI systems");
+  }
 
   const system = await prisma.aiSystem.create({
     data: {
@@ -71,6 +75,9 @@ export async function createAiSystem(formData: FormData) {
 export async function updateAiSystem(aiSystemId: string, formData: FormData) {
   const fields = parseAiSystemFields(formData);
   const actor = await getCurrentUser();
+  if (!canManageSystem(actor.role)) {
+    throw new Error("Your role can't edit AI systems");
+  }
 
   const before = await assertSystemEditable(aiSystemId);
 
@@ -97,7 +104,10 @@ export async function updateAiSystem(aiSystemId: string, formData: FormData) {
 }
 
 export async function deleteAiSystem(aiSystemId: string) {
-  await getCurrentUser();
+  const actor = await getCurrentUser();
+  if (!canManageSystem(actor.role)) {
+    throw new Error("Your role can't delete AI systems");
+  }
   await prisma.aiSystem.delete({ where: { id: aiSystemId } });
   revalidatePath("/systems");
   redirect("/systems");
@@ -107,6 +117,9 @@ export async function deleteAiSystem(aiSystemId: string) {
 // for a retired tool a client still needs to review later, not lose.
 export async function archiveAiSystem(aiSystemId: string) {
   const actor = await getCurrentUser();
+  if (!canManageSystem(actor.role)) {
+    throw new Error("Your role can't archive AI systems");
+  }
   await prisma.aiSystem.update({
     where: { id: aiSystemId },
     data: { archivedAt: new Date() },
@@ -123,6 +136,9 @@ export async function archiveAiSystem(aiSystemId: string) {
 
 export async function unarchiveAiSystem(aiSystemId: string) {
   const actor = await getCurrentUser();
+  if (!canManageSystem(actor.role)) {
+    throw new Error("Your role can't unarchive AI systems");
+  }
   await prisma.aiSystem.update({
     where: { id: aiSystemId },
     data: { archivedAt: null },
@@ -145,6 +161,9 @@ export async function decideStage(stageId: string, formData: FormData) {
   }
 
   const actor = await getCurrentUser();
+  if (!canDecideStage(actor.role)) {
+    throw new Error("Your role can't record workflow decisions");
+  }
 
   const existingStage = await prisma.workflowStage.findUniqueOrThrow({
     where: { id: stageId },

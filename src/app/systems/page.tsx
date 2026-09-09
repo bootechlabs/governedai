@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { createAiSystem } from "./actions";
 import { ClassificationBadge, DeploymentStatusBadge, StageStatusBadge } from "@/lib/badges";
 import { inputClass, primaryButtonClass, subtleLinkClass } from "@/lib/ui";
+import { getCurrentUser } from "@/lib/current-user";
+import { canCreateSystem } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,8 @@ export default async function SystemsPage({
 }) {
   const { archived } = await searchParams;
   const showArchived = archived === "1";
+  const actor = await getCurrentUser();
+  const canCreate = canCreateSystem(actor.role);
 
   const [systems, activeCount, archivedCount] = await Promise.all([
     prisma.aiSystem.findMany({
@@ -72,7 +76,7 @@ export default async function SystemsPage({
           </span>
         </div>
 
-        {!showArchived && (
+        {!showArchived && canCreate && (
           <div
             role="row"
             className={`grid ${gridCols} border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/40`}

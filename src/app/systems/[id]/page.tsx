@@ -13,6 +13,8 @@ import { ClassificationBadge, DeploymentStatusBadge, StageStatusBadge } from "@/
 import { isStageActionable } from "@/lib/workflow";
 import { inputClass, primaryButtonClass, subtleLinkClass } from "@/lib/ui";
 import { DeleteSystemButton } from "./delete-button";
+import { getCurrentUser } from "@/lib/current-user";
+import { canManageSystem, canDecideStage } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +37,10 @@ export default async function SystemDetailPage({
 
   if (!system) notFound();
 
+  const actor = await getCurrentUser();
   const isArchived = !!system.archivedAt;
+  const canManage = canManageSystem(actor.role);
+  const canDecide = canDecideStage(actor.role);
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
@@ -63,6 +68,7 @@ export default async function SystemDetailPage({
         </p>
       )}
 
+      {canManage && (
       <details className="mt-4 rounded-lg border border-zinc-200 dark:border-zinc-800">
         <summary className="cursor-pointer px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400">
           {isArchived ? "System actions" : "Edit system details"}
@@ -143,6 +149,7 @@ export default async function SystemDetailPage({
           </div>
         </div>
       </details>
+      )}
 
       <h2 className="mt-10 text-lg font-medium">Workflow</h2>
       <ol className="mt-4 flex flex-col gap-4">
@@ -162,7 +169,7 @@ export default async function SystemDetailPage({
                 {stage.decisionRationale}
               </p>
             )}
-            {isStageActionable(stage.status) && !isArchived ? (
+            {isStageActionable(stage.status) && !isArchived && canDecide ? (
               <form
                 action={decideStage.bind(null, stage.id)}
                 className="mt-3 flex flex-col gap-2 sm:flex-row"

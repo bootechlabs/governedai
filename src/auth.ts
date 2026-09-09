@@ -1,10 +1,45 @@
 import NextAuth from "next-auth";
 import Resend from "next-auth/providers/resend";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
+// Auth.js's Email/Resend flow calls adapter.createUser() automatically for
+// any email with no existing User row — i.e. open self-registration. This
+// app is provisioned by an admin (see /systems/users), so createUser is
+// disabled entirely: signing in with an email nobody has provisioned fails
+// here, before any User or Session row is created. (The signIn callback
+// runs too late for this — Auth.js already creates the user/session for
+// the email strategy before invoking it.)
+const baseAdapter = PrismaAdapter(prisma);
+const adapter = {
+  ...baseAdapter,
+  async createUser() {
+    throw new Error(
+      "This email hasn't been provisioned for GovernedAI. Ask an admin to add your account first.",
+    );
+  },
+  // Signing in with a stale/invalid session cookie (e.g. after the DB was
+  // reset while the browser kept an old cookie) makes Auth.js try to
+  // delete a session row that's already gone — the default adapter throws
+  // on that instead of treating it as already-done.
+  async deleteSession(sessionToken: string) {
+    try {
+      await baseAdapter.deleteSession!(sessionToken);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2025"
+      ) {
+        return;
+      }
+      throw error;
+    }
+  },
+};
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter,
   providers: [
     Resend({
       apiKey: process.env.AUTH_RESEND_KEY,
@@ -38,6 +73,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "database" },
   pages: {
     signIn: "/sign-in",
+    error: "/auth/error",
   },
   callbacks: {
     authorized({ auth, request }) {
