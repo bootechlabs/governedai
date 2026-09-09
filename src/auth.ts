@@ -10,10 +10,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       apiKey: process.env.AUTH_RESEND_KEY,
       from: process.env.EMAIL_FROM,
       async sendVerificationRequest({ identifier, url }) {
+        // Email link-safety scanners (Gmail, corporate gateways) prefetch
+        // every URL in an email body, which silently burns a single-use
+        // magic link before the human clicks it. Send a link to our own
+        // confirm page instead — scanners fetch that harmlessly, but only
+        // an actual click on its button reaches the real callback URL.
+        const confirmUrl = `${new URL(url).origin}/auth/confirm?url=${encodeURIComponent(url)}`;
+
         if (!process.env.AUTH_RESEND_KEY) {
           // Dev fallback — no Resend key configured. Log the link instead
           // of sending an email so local sign-in still works end to end.
-          console.log(`\n[dev] Magic link for ${identifier}:\n${url}\n`);
+          console.log(`\n[dev] Magic link for ${identifier}:\n${confirmUrl}\n`);
           return;
         }
         const { Resend: ResendClient } = await import("resend");
@@ -22,7 +29,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           from: process.env.EMAIL_FROM ?? "GovernedAI <noreply@governedai.co>",
           to: identifier,
           subject: "Sign in to GovernedAI",
-          html: `<p><a href="${url}">Sign in to GovernedAI</a></p><p>This link expires in 24 hours.</p>`,
+          html: `<p><a href="${confirmUrl}">Sign in to GovernedAI</a></p><p>This link expires in 24 hours.</p>`,
         });
         if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`);
       },
