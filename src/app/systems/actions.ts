@@ -10,12 +10,19 @@ import { logAuditEntry } from "@/lib/audit-log";
 import { canCreateSystem, canManageSystem, canDecideStage } from "@/lib/permissions";
 import type { DataClassification, DeploymentStatus, StageStatus } from "@prisma/client";
 
-// An archived system is frozen — its workflow/evidence/audit history stays
-// reviewable, but nothing about it should keep changing underneath that
-// history. Enforced here (not just hidden in the UI) since a bound form
-// action can still be POSTed to directly.
-async function assertSystemEditable(aiSystemId: string) {
+// Every mutation on an AiSystem needs two checks: it belongs to the
+// actor's own organization (otherwise a user in one org could act on
+// another org's data just by knowing/guessing an id — there's no other
+// gate, since ids aren't secret), and it isn't archived (frozen —
+// workflow/evidence/audit history stays reviewable, but nothing about it
+// should keep changing underneath that history). Enforced here, not just
+// hidden in the UI, since a bound form action can still be POSTed to
+// directly.
+async function assertSystemEditable(aiSystemId: string, organizationId: string) {
   const system = await prisma.aiSystem.findUniqueOrThrow({ where: { id: aiSystemId } });
+  if (system.organizationId !== organizationId) {
+    throw new Error("Not found");
+  }
   if (system.archivedAt) {
     throw new Error("This AI system is archived — unarchive it before making changes.");
   }
@@ -51,6 +58,7 @@ export async function createAiSystem(formData: FormData) {
   const system = await prisma.aiSystem.create({
     data: {
       ...fields,
+      organizationId: owner.organizationId,
       ownerId: owner.id,
       stages: {
         create: DEFAULT_WORKFLOW_STAGES.map((stage) => ({
@@ -79,7 +87,7 @@ export async function updateAiSystem(aiSystemId: string, formData: FormData) {
     throw new Error("Your role can't edit AI systems");
   }
 
-  const before = await assertSystemEditable(aiSystemId);
+  const before = await assertSystemEditable(aiSystemId, actor.organizationId);
 
   await prisma.aiSystem.update({ where: { id: aiSystemId }, data: fields });
 
@@ -108,6 +116,10 @@ export async function deleteAiSystem(aiSystemId: string) {
   if (!canManageSystem(actor.role)) {
     throw new Error("Your role can't delete AI systems");
   }
+  const system = await prisma.aiSystem.findUniqueOrThrow({ where: { id: aiSystemId } });
+  if (system.organizationId !== actor.organizationId) {
+    throw new Error("Not found");
+  }
   await prisma.aiSystem.delete({ where: { id: aiSystemId } });
   revalidatePath("/systems");
   redirect("/systems");
@@ -119,6 +131,10 @@ export async function archiveAiSystem(aiSystemId: string) {
   const actor = await getCurrentUser();
   if (!canManageSystem(actor.role)) {
     throw new Error("Your role can't archive AI systems");
+  }
+  const system = await prisma.aiSystem.findUniqueOrThrow({ where: { id: aiSystemId } });
+  if (system.organizationId !== actor.organizationId) {
+    throw new Error("Not found");
   }
   await prisma.aiSystem.update({
     where: { id: aiSystemId },
@@ -138,6 +154,10 @@ export async function unarchiveAiSystem(aiSystemId: string) {
   const actor = await getCurrentUser();
   if (!canManageSystem(actor.role)) {
     throw new Error("Your role can't unarchive AI systems");
+  }
+  const system = await prisma.aiSystem.findUniqueOrThrow({ where: { id: aiSystemId } });
+  if (system.organizationId !== actor.organizationId) {
+    throw new Error("Not found");
   }
   await prisma.aiSystem.update({
     where: { id: aiSystemId },
@@ -169,6 +189,9 @@ export async function decideStage(stageId: string, formData: FormData) {
     where: { id: stageId },
     include: { aiSystem: true },
   });
+  if (existingStage.aiSystem.organizationId !== actor.organizationId) {
+    throw new Error("Not found");
+  }
   if (existingStage.aiSystem.archivedAt) {
     throw new Error("This AI system is archived — unarchive it before making changes.");
   }
@@ -200,7 +223,7 @@ export async function attachEvidence(aiSystemId: string, formData: FormData) {
   const file = formData.get("file");
 
   const actor = await getCurrentUser();
-  await assertSystemEditable(aiSystemId);
+  await assertSystemEditable(aiSystemId, actor.organizationId);
 
   let evidence;
   if (file instanceof File && file.size > 0) {

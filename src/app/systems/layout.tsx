@@ -1,14 +1,19 @@
 import Link from "next/link";
-import { signOut } from "@/auth";
-import { getCurrentUser } from "@/lib/current-user";
+import { redirect } from "next/navigation";
+import { getCurrentUserOrNull } from "@/lib/current-user";
 import { canManageUsers } from "@/lib/permissions";
+import { getSessionCookie, clearSessionCookie } from "@/lib/session";
+import { stytchClient } from "@/lib/stytch";
 
 export default async function SystemsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserOrNull();
+  if (!user) {
+    redirect("/sign-in");
+  }
 
   return (
     <div>
@@ -26,7 +31,12 @@ export default async function SystemsLayout({
           <form
             action={async () => {
               "use server";
-              await signOut({ redirectTo: "/sign-in" });
+              const sessionJwt = await getSessionCookie();
+              await clearSessionCookie();
+              if (sessionJwt) {
+                await stytchClient.sessions.revoke({ session_jwt: sessionJwt });
+              }
+              redirect("/sign-in");
             }}
           >
             <button type="submit" className="hover:underline">

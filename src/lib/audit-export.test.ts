@@ -5,10 +5,9 @@ import type { AuditLogEntry, User } from "@prisma/client";
 function fakeUser(overrides: Partial<User> = {}): User {
   return {
     id: "user_1",
+    organizationId: "org_1",
     name: "Test User",
     email: "test@example.com",
-    emailVerified: null,
-    image: null,
     role: "ADMIN",
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     ...overrides,

@@ -8,7 +8,7 @@ import { addUser, updateUserRole } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-const gridCols = "grid-cols-[2fr_1fr_1fr_150px]";
+const gridCols = "grid-cols-[2fr_1.5fr_1fr_150px]";
 const cellClass = "px-3 py-2 flex items-center text-xs";
 const cellInputClass = `w-full ${inputClass}`;
 
@@ -22,7 +22,10 @@ export default async function UsersPage() {
   const actor = await getCurrentUser();
   if (!canManageUsers(actor.role)) notFound();
 
-  const users = await prisma.user.findMany({ orderBy: { createdAt: "asc" } });
+  const users = await prisma.user.findMany({
+    where: { organizationId: actor.organizationId },
+    orderBy: { createdAt: "asc" },
+  });
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-12">
@@ -72,7 +75,13 @@ export default async function UsersPage() {
             />
           </span>
           <span role="cell" className={cellClass}>
-            —
+            <input
+              form="add-user-form"
+              name="name"
+              type="text"
+              placeholder="Name (optional)"
+              className={cellInputClass}
+            />
           </span>
           <span role="cell" className={cellClass}>
             <select

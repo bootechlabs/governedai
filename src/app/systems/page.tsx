@@ -22,14 +22,17 @@ export default async function SystemsPage({
   const actor = await getCurrentUser();
   const canCreate = canCreateSystem(actor.role);
 
+  const orgId = actor.organizationId;
   const [systems, activeCount, archivedCount] = await Promise.all([
     prisma.aiSystem.findMany({
-      where: showArchived ? { archivedAt: { not: null } } : { archivedAt: null },
+      where: showArchived
+        ? { organizationId: orgId, archivedAt: { not: null } }
+        : { organizationId: orgId, archivedAt: null },
       orderBy: { createdAt: "desc" },
       include: { owner: true, stages: { orderBy: { sequence: "asc" } } },
     }),
-    prisma.aiSystem.count({ where: { archivedAt: null } }),
-    prisma.aiSystem.count({ where: { archivedAt: { not: null } } }),
+    prisma.aiSystem.count({ where: { organizationId: orgId, archivedAt: null } }),
+    prisma.aiSystem.count({ where: { organizationId: orgId, archivedAt: { not: null } } }),
   ]);
 
   return (
