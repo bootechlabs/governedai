@@ -20,7 +20,7 @@ if (process.env.NODE_ENV !== "production") {
   globalForStytch.stytchClient = stytchClient;
 }
 
-export const stytchPublicToken = process.env.NEXT_PUBLIC_STYTCH_PUBLIC_TOKEN!;
+export const stytchPublicToken = process.env.NEXT_PUBLIC_STYTCH_PUBLIC_KEY!;
 
 // Used to build the SSO redirect URL (see the "Sign in with SSO" flow in
 // src/app/sign-in) — Stytch's SSO start endpoint is a plain GET the browser
