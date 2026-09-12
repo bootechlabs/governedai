@@ -1,4 +1,5 @@
-import { signIn } from "@/auth";
+import { redirect } from "next/navigation";
+import { sendMagicLink } from "./actions";
 import { inputClass, primaryButtonClass } from "@/lib/ui";
 
 export default function SignInPage() {
@@ -11,10 +12,8 @@ export default function SignInPage() {
       <form
         action={async (formData) => {
           "use server";
-          await signIn("resend", {
-            email: formData.get("email"),
-            redirectTo: "/systems",
-          });
+          await sendMagicLink(formData);
+          redirect("/sign-in/check-email");
         }}
         className="mt-6 flex flex-col gap-3"
       >

@@ -24,9 +24,10 @@ export default async function SystemDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const actor = await getCurrentUser();
 
   const system = await prisma.aiSystem.findUnique({
-    where: { id },
+    where: { id, organizationId: actor.organizationId },
     include: {
       owner: true,
       stages: { orderBy: { sequence: "asc" }, include: { owner: true } },
@@ -37,7 +38,6 @@ export default async function SystemDetailPage({
 
   if (!system) notFound();
 
-  const actor = await getCurrentUser();
   const isArchived = !!system.archivedAt;
   const canManage = canManageSystem(actor.role);
   const canDecide = canDecideStage(actor.role);

@@ -1,5 +1,12 @@
 // GovernedAI MVP data model — see docs/mvp-scope.md for the pillar this backs
 // (inventory / workflow / evidence) and the field rationale.
+//
+// Identity, organizations, sessions, and SSO are owned by Stytch B2B, not
+// this database — see src/lib/stytch.ts. Organization.id and User.id are
+// Stytch's organization_id / member_id verbatim (not generated cuids), so
+// there's exactly one ID system instead of two that could drift. This
+// schema only mirrors the fields needed for fast local joins/display
+// (names, roles, audit trail) — Stytch stays authoritative for auth.
 
 generator client {
   provider = "prisma-client-js"
@@ -43,59 +50,34 @@ enum EvidenceType {
   LINK
 }
 
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  role          UserRole  @default(CONTRIBUTOR)
-  createdAt     DateTime  @default(now())
+// Mirrors a Stytch B2B Organization. id = Stytch's organization_id.
+model Organization {
+  id        String   @id
+  name      String
+  createdAt DateTime @default(now())
 
-  accounts Account[]
-  sessions Session[]
+  users     User[]
+  aiSystems AiSystem[]
+}
+
+// Mirrors a Stytch B2B Member. id = Stytch's member_id. Role is local-only
+// (Stytch doesn't need to know our app-specific RBAC) — set via the admin
+// "Manage users" page, read synchronously by src/lib/permissions.ts.
+model User {
+  id             String       @id
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+  name           String?
+  email          String
+  role           UserRole     @default(CONTRIBUTOR)
+  createdAt      DateTime     @default(now())
 
   ownedSystems     AiSystem[]      @relation("SystemOwner")
   ownedStages      WorkflowStage[] @relation("StageOwner")
   uploadedEvidence EvidenceItem[]  @relation("EvidenceUploader")
   auditEntries     AuditLogEntry[] @relation("AuditActor")
-}
 
-// Auth.js (NextAuth) PrismaAdapter — required shape, see https://authjs.dev/getting-started/adapters/prisma
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
+  @@unique([organizationId, email])
 }
 
 model AiSystem {
@@ -110,12 +92,17 @@ model AiSystem {
   updatedAt        DateTime           @updatedAt
   archivedAt       DateTime?
 
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+
   owner   User   @relation("SystemOwner", fields: [ownerId], references: [id])
   ownerId String
 
   stages   WorkflowStage[]
   evidence EvidenceItem[]
   auditLog AuditLogEntry[]
+
+  @@index([organizationId])
 }
 
 // Fixed MVP stage sequence (see mvp-scope.md): Intake -> Risk Review -> decision.

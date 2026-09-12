@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/current-user";
 import { buildAuditCsv, buildAuditPdf, slugifyFileName } from "@/lib/audit-export";
 
 export async function GET(
@@ -10,8 +11,9 @@ export async function GET(
   const { id } = await params;
   const format = request.nextUrl.searchParams.get("format") === "pdf" ? "pdf" : "csv";
 
+  const actor = await getCurrentUser();
   const system = await prisma.aiSystem.findUnique({
-    where: { id },
+    where: { id, organizationId: actor.organizationId },
     include: {
       auditLog: { orderBy: { occurredAt: "asc" }, include: { actor: true } },
     },
