@@ -2,6 +2,21 @@
 
 Companion to `solo-founder-execution-plan.md`. That doc decided *what* to build next ("Phase 1 scope — inventory + workflow + evidence core") and *where* ("Claude Code CLI, this repo, once real MVP coding starts"). This doc defines *what "done" looks like* for that build.
 
+## Status — 2026-09-14
+
+Live at app.governedai.co (Vercel), real design-partner org (Bootech) provisioned. Shipped, beyond original scope:
+
+- **Auth**: Stytch B2B magic-link sign-in (not NextAuth/Auth.js as originally planned — see stack section).
+- **Multi-tenancy**: real, not deferred. `Organization` owns `User`/`AiSystem`; every query/mutation is org-scoped server-side. Pulled forward from "later" because Stytch made it close to free once magic-link auth was in place.
+- **Admin-provisioned users with RBAC**: ADMIN / REVIEWER / CONTRIBUTOR roles, enforced both in UI and server actions. Live-tested end-to-end for all three roles.
+- **Inventory, workflow, evidence, audit export**: all three original pillars built and live-verified (create system → stage decisions → evidence upload to R2 → CSV/PDF audit export).
+
+Not yet built (still open):
+- Per-org SSO connections (SAML/OIDC) — `ssoStartUrl` helper exists in `src/lib/stytch.ts` and the callback route already handles an `sso` token type, but no UI to create/configure a connection per org, and no "Sign in with SSO" button. Only magic-link auth is live.
+- CSV/Excel bulk import, public API.
+- Auto-discovery (still explicitly deferred, see below).
+- Stytch project is still **Test environment** in production (a deliberate near-term tradeoff, not an oversight — see stack section).
+
 ## Context
 
 Phase 0 shipped a self-scoring assessment (live artifact + governedai.co), scored across 5 dimensions: inventory & discovery, risk classification & regulatory mapping, governance workflows, evidence & audit trail, vendor & third-party oversight. It's a lead-gen instrument, not the product — it tells a visitor how exposed they are but does nothing to fix it.
@@ -35,19 +50,20 @@ One design partner org (health system, digital health vendor, or payer/RCM — p
 - Risk classification & regulatory mapping automation (mapping a system to specific regulations/frameworks) — dimension 2 of the assessment, deferred.
 - Vendor & third-party oversight as a distinct module (beyond recording "vendor" as a field on a system) — dimension 5, deferred.
 - Auto-discovery/scanning of AI usage.
-- Multi-tenant self-serve signup, billing, plan tiers.
+- Self-serve signup, billing, plan tiers — multi-tenant *data isolation* shipped (see Status), but org creation is still admin/seed-provisioned, not self-serve.
 - Configurable/custom workflow builder — stages are fixed for MVP, configurable later.
 - Email/Slack/notification integrations.
-- SSO/enterprise auth — simple auth (email+password or magic link) is enough for a single design-partner org.
+- Per-org SSO connections (SAML/OIDC) — the identity provider (Stytch B2B) supports it and the callback path is already wired, but no UI exists to set up a connection per org yet. Magic-link auth, now multi-org-aware, covers MVP.
 - Mobile app — responsive web only.
 
-## Core data model (draft)
+## Core data model (as built)
 
-- **AiSystem** — id, name, owner, business_unit, description, vendor_name (nullable), data_sensitivity, deployment_status, created_at, updated_at
-- **WorkflowStage** — id, ai_system_id, stage_name, status (pending/in_review/approved/rejected), owner_user_id, decision_rationale, decided_at
-- **EvidenceItem** — id, ai_system_id, workflow_stage_id (nullable), type (file/link), file_url or link_url, uploaded_by, uploaded_at
-- **AuditLogEntry** — id, ai_system_id, actor_user_id, action, detail (before/after JSON), occurred_at
-- **User** — id, name, email, role (admin/reviewer/contributor)
+- **Organization** — id (= Stytch `organization_id`), name, created_at. Owns all Users and AiSystems.
+- **User** — id (= Stytch `member_id`), organization_id, name (nullable), email, role (ADMIN/REVIEWER/CONTRIBUTOR), created_at. Identity/session/SSO ownership lives in Stytch; this row mirrors display fields + app-specific RBAC role.
+- **AiSystem** — id, organization_id, name, owner, business_unit, description, vendor_name (nullable), classification (data sensitivity), deployment_status, archived_at (nullable), created_at, updated_at
+- **WorkflowStage** — id, ai_system_id, sequence, stage_name, status (pending/in_review/approved/conditionally_approved/rejected), owner_user_id, decision_rationale, decided_at
+- **EvidenceItem** — id, ai_system_id, type (file/link), file_url or link_url, label, uploaded_by, uploaded_at
+- **AuditLogEntry** — id, ai_system_id, actor_id, action, detail (JSON), occurred_at
 
 ## Key user flows
 
@@ -57,17 +73,14 @@ One design partner org (health system, digital health vendor, or payer/RCM — p
 4. Anyone with access opens the audit log for a system and exports it.
 5. Dashboard shows inventory count by status + stages currently pending review, across all systems.
 
-## Proposed stack (open decision — flag before scaffolding)
+## Stack (as built)
 
-Solo founder + Claude Code CLI, one design partner, need a fast build/iterate loop over a polished one:
 - **Next.js (App Router) + TypeScript** — single deployable, frontend+API together.
-- **Postgres + Prisma** — real relational data (systems/stages/evidence/audit all relate), migrations tracked in repo.
-- **Auth**: NextAuth/Auth.js with email magic link — no password storage, minimal build.
-- **File storage**: local/S3-compatible bucket for evidence uploads (Cloudflare R2 or S3) — flag if a specific provider is already preferred.
-- **Hosting**: Vercel (pairs with Next.js, zero-config) or Fly.io if Postgres + file storage should live together — flag for a decision.
-- **Testing**: Vitest for units, Playwright for the core flow (create system → move through stages → attach evidence → export audit log) as a smoke test.
-
-This is a proposal, not a decision — confirm before scaffolding, especially hosting/storage provider (execution plan already surfaces Vercel/Netlify/Fly/Cloudflare as considered-not-installed options).
+- **Postgres + Prisma** — Neon in production, local Docker Postgres for dev; migrations tracked in repo.
+- **Auth**: originally scoped as NextAuth/Auth.js email magic link, replaced with **Stytch B2B** — same magic-link UX, but adds real multi-org identity (organizations/members/sessions) and a path to per-org SSO without another migration later. Tradeoff taken deliberately: production currently runs on Stytch's **Test environment** project (not Live) — functionally identical, real emails sent, but meant as a near-term start, not a permanent choice; revisit before scaling past the first design partner.
+- **File storage**: Cloudflare R2 (S3-compatible) for evidence uploads, local-disk fallback for dev.
+- **Hosting**: Vercel, auto-deploys `main`.
+- **Testing**: Vitest for units, Playwright for the auth-gate smoke test.
 
 ## Definition of done for MVP
 
@@ -78,5 +91,6 @@ This is a proposal, not a decision — confirm before scaffolding, especially ho
 ## Open questions
 
 - Which design partner, and which ICP (vendor vs. health system vs. payer/RCM) — still unresolved per the execution plan; may shape which fields/workflow stages matter most.
-- Storage/hosting provider choice (above).
 - Exact workflow stage names/criteria — placeholder (Intake → Risk Review → Approved/Conditional/Rejected) until a design partner's real process is known; keep stage *content* easy to relabel even though the shape is fixed.
+- When to move Stytch from Test to Live environment — before the first real (non-Bootech) design partner org is provisioned, at the latest.
+- Whether/when per-org SSO (SAML/OIDC) setup becomes a real ask — infra is there, UI isn't.
