@@ -9,11 +9,14 @@ import {
   Building2,
   CircleQuestionMark,
   LogOut,
+  UserCog,
 } from "lucide-react";
 import { getCurrentUserOrNull } from "@/lib/current-user";
 import { canManageUsers, canManageSso, canManageApiKeys, canManageVendors } from "@/lib/permissions";
 import { getSessionCookie, clearSessionCookie } from "@/lib/session";
+import { endImpersonation, clearImpersonationCookie } from "@/lib/impersonation";
 import { stytchClient } from "@/lib/stytch";
+import { stopImpersonation } from "./impersonation-actions";
 
 export default async function SystemsLayout({
   children,
@@ -76,6 +79,10 @@ export default async function SystemsLayout({
           <form
             action={async () => {
               "use server";
+              if (user.impersonation) {
+                await endImpersonation(user.impersonation.impersonationId);
+                await clearImpersonationCookie();
+              }
               const sessionJwt = await getSessionCookie();
               await clearSessionCookie();
               if (sessionJwt) {
@@ -91,6 +98,22 @@ export default async function SystemsLayout({
           </form>
         </div>
       </header>
+
+      {user.impersonation && (
+        <div className="flex items-center justify-between gap-3 border-b border-amber-300 bg-amber-50 px-6 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+          <span className="inline-flex items-center gap-1.5">
+            <UserCog size={15} />
+            Viewing as {user.email} on behalf of {user.impersonation.realAdminEmail} — expires{" "}
+            {user.impersonation.expiresAt.toLocaleTimeString()}
+          </span>
+          <form action={stopImpersonation}>
+            <button type="submit" className="font-medium underline hover:no-underline">
+              Stop impersonating
+            </button>
+          </form>
+        </div>
+      )}
+
       {children}
     </div>
   );

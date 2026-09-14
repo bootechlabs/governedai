@@ -100,6 +100,8 @@ model Organization {
   name      String
   createdAt DateTime @default(now())
 
+  vertical  String?
+
   users     User[]
   aiSystems AiSystem[]
   apiKeys   ApiKey[]
@@ -141,6 +143,11 @@ model User {
   name           String?
   email          String
   role           UserRole     @default(CONTRIBUTOR)
+  // Orthogonal to `role` — a handful of Bootech staff, not an org-scoped
+  // permission. Grants access to /platform (see src/app/platform) and the
+  // ability to impersonate any non-platform-admin user. Set directly via
+  // prisma/seed.ts or a manual DB update; no in-app UI grants this.
+  isPlatformAdmin Boolean     @default(false)
   createdAt      DateTime     @default(now())
 
   ownedSystems     AiSystem[]      @relation("SystemOwner")
@@ -149,8 +156,32 @@ model User {
   auditEntries     AuditLogEntry[] @relation("AuditActor")
   createdApiKeys   ApiKey[]        @relation("ApiKeyCreator")
   riskClassificationsCompleted RiskClassification[] @relation("RiskClassificationCompleter")
+  impersonationsInitiated ImpersonationSession[] @relation("ImpersonationInitiator")
+  impersonationsReceived  ImpersonationSession[] @relation("ImpersonationTarget")
 
   @@unique([organizationId, email])
+}
+
+// One row per impersonation session, time-boxed via expiresAt; endedAt is
+// set explicitly on stop. src/lib/current-user.ts checks both before
+// honoring one — see src/lib/impersonation.ts for the create/read/end
+// helpers. Never updated except to set endedAt (audit trail of every
+// impersonation lives here plus the impersonation_started/ended
+// AuditLogEntry rows).
+model ImpersonationSession {
+  id         String    @id @default(cuid())
+  startedAt  DateTime  @default(now())
+  expiresAt  DateTime
+  endedAt    DateTime?
+
+  platformAdmin   User @relation("ImpersonationInitiator", fields: [platformAdminId], references: [id])
+  platformAdminId String
+
+  targetUser   User @relation("ImpersonationTarget", fields: [targetUserId], references: [id])
+  targetUserId String
+
+  @@index([platformAdminId])
+  @@index([targetUserId])
 }
 
 model AiSystem {

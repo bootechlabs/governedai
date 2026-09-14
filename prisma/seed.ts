@@ -53,13 +53,17 @@ async function main() {
 
   await prisma.user.upsert({
     where: { id: member.member_id },
-    update: {},
+    // Bootech operates the platform, so its seeded admin is also the
+    // platform admin — set on every run so it's granted retroactively to
+    // an already-existing row too, not just on first create.
+    update: { isPlatformAdmin: true },
     create: {
       id: member.member_id,
       organizationId: organization.organization_id,
       email: ADMIN_EMAIL,
       name: "Bootech Admin",
       role: "ADMIN",
+      isPlatformAdmin: true,
     },
   });
 }

@@ -9,6 +9,7 @@ function fakeUser(overrides: Partial<User> = {}): User {
     name: "Test User",
     email: "test@example.com",
     role: "ADMIN",
+    isPlatformAdmin: false,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     ...overrides,
   };

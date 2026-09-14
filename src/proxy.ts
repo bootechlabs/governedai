@@ -15,5 +15,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/systems/:path*"],
+  matcher: ["/systems/:path*", "/platform/:path*"],
 };
