@@ -27,7 +27,13 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://governedai:governedai@localhost:5432/governedai
-      AUTH_SECRET: ci-only-placeholder-secret-not-for-prod-use
+      # Placeholder values, not real credentials — nothing in CI actually
+      # calls the Stytch API, but the client throws at module load if
+      # these env vars are unset (see src/lib/stytch.ts).
+      STYTCH_PROJECT_ID: project-test-ci-placeholder
+      STYTCH_SECRET: secret-test-ci-placeholder
+      NEXT_PUBLIC_STYTCH_PUBLIC_KEY: public-token-test-ci-placeholder
+      STYTCH_PROJECT_ENV: test
 
     steps:
       - uses: actions/checkout@v4
