@@ -6,27 +6,31 @@ Companion to `solo-founder-execution-plan.md`. This doc merges two things that d
 
 Live at app.governedai.co (Vercel), real org (Bootech) provisioned.
 
-**Shipped:**
-- **Auth**: Stytch B2B magic-link sign-in, multi-org-aware.
-- **Multi-tenancy**: real. `Organization` owns `User`/`AiSystem`; every query/mutation is org-scoped server-side.
-- **Per-org SSO (SAML/OIDC)**: admins configure a connection per org at `/systems/sso`; sign-in page has a "Continue with SSO" path. Not yet tested against a real IdP.
-- **Admin-provisioned users with RBAC**: ADMIN / REVIEWER / CONTRIBUTOR, enforced in UI and server actions.
-- **Inventory, fixed 2-stage workflow (Intake → Risk Review), evidence, audit export**: built and live-verified end-to-end.
-- **Bulk import**: `/systems/import`, CSV or Excel, live-verified.
+**Shipped — all six build-sequence slices below, plus platform-admin tooling beyond the original v0.1 scope:**
+- **Auth**: Stytch B2B magic-link sign-in, multi-org-aware, plus per-org SSO (SAML/OIDC) at `/systems/sso`. Not yet tested against a real IdP.
+- **Multi-tenancy**: real. `Organization` owns `User`/`AiSystem`/`Vendor`/`ApiKey`; every query/mutation is org-scoped server-side.
+- **RBAC**: ADMIN/REVIEWER/CONTRIBUTOR, enforced in UI and server actions.
+- **Inventory + dashboard**: `/systems` is a real dashboard (counts by deployment/risk tier, vendor BAA attention, pending workflow reviews, recent activity); the list itself lives at `/systems/inventory`.
+- **Workflow**: fixed 2-stage (Intake → Risk Review), decisions + rationale, audit-logged.
+- **Intake questionnaire + risk classification** (slice 2): use-case-specific templates (ambient scribe, CDS, prior auth/UM, RCM/billing, patient chatbot) + a generic fallback, each a shared core question set plus 2 template-specific questions. Produces a risk tier and flags likely-triggered regulations (NIST AI RMF, EU AI Act, ISO 42001, NYC LL144, CO SB21-169) via `/systems/[id]/risk-assessment`.
+- **Vendor registry + evidence-type tagging** (slice 4): admin-managed `Vendor` entity (BAA status, subprocessors, SOC 2/model card links) at `/systems/vendors`, auto-linked to a system when its vendor name matches exactly — additive, not a breaking change to the existing free-text field. Evidence now carries a `category` (BAA, SOC 2 report, model card, bias audit report, etc.).
+- **Full governance report** (slice 5): `/systems/[id]/audit?format=pdf` is a real report — system record, risk classification, per-regulation compliance checklists (checked against real attached evidence, not fabricated findings), workflow history, evidence list, audit trail, GovernedAI-branded. CSV export stays a flat audit-log dump — different tool for a different job.
+- **Bulk import**: `/systems/import`, CSV or Excel.
 - **Public API**: `/api/v1/ai-systems` (list/get/create), per-org API keys at `/systems/api-keys`. No update/delete endpoints yet.
+- **Platform-admin layer** (beyond original v0.1 scope): `User.isPlatformAdmin` gates `/platform` — a global dashboard across every org/vertical, and an impersonation flow (view-as any org's user, time-boxed to 1 hour, email + audit-logged, banner + one-click stop). Built because supporting multiple real customers with zero cross-org visibility wasn't viable.
+- **Icons + legend**: nav, page headings, and section headings are icon-led; `/systems/legend` explains every one, generated from the same config objects the badges use so it can't drift.
 
-**Not yet built** (the v0.1 vision below — see "Suggested build sequence"):
-- Vendor as a first-class entity (BAA status, subprocessor list, vendor SOC 2/model card as structured fields) — currently just a text field on AiSystem.
-- Use-case-specific intake questionnaires (ambient scribe, CDS, prior auth/UM, RCM/billing AI, patient-facing chatbot) + a generic fallback ported from the governedai.co assessment.
-- Risk classification derived from the questionnaire, including which specific regulations a system likely triggers.
-- Law-specific report export sections (e.g., NYC LL144 bias-audit/candidate-notice, CO SB21-169 impact-assessment/consumer-notice).
-- Change Event detection + recertification trigger.
+**Not yet built:**
+- Change Event detection + recertification trigger (slice 6 — explicitly gated on 1–5 being solid, which they now are; next up if pursued).
+- Portfolio-level report export (system-level is done).
+- Update/delete on the public API.
+- Stytch Live environment cutover (still on Test).
 
 ## Reconciliation note
 
 The Cowork planning session's v0.1 doc (2026-09-14) listed SSO and multi-tenancy as explicitly out of scope for v0.1 ("not needed while it's just Tony operating it directly... add before any GA/enterprise push") and CSV import as a deferred fast-follow. By the time that doc was written, all three had already been built, deployed, and live-verified in the Claude Code CLI session — the two planning surfaces (Cowork for strategy, Code CLI for implementation, per the tooling-split decision in `solo-founder-execution-plan.md`) had drifted out of sync.
 
-Decision: keep SSO and multi-tenancy — they're working, cost nothing to maintain, and de-risk the eventual multi-org/design-partner future even though the v0.1 doc's "solo founder, no design partners yet" framing didn't anticipate needing them this early. The v0.1 doc's actual differentiated bet — vendor-AI-first, healthcare-specific, law-aware reporting, operable without a GRC team — is adopted as the forward direction for everything not yet built. Its non-goals around runtime enforcement/observability, bias-testing engines, and framework-breadth-chasing (the EasyAudit/Fiddler/Zenity/Darktrace lanes) stand as written.
+Decision: keep SSO and multi-tenancy — they're working, cost nothing to maintain, and de-risk the eventual multi-org/design-partner future even though the v0.1 doc's "solo founder, no design partners yet" framing didn't anticipate needing them this early. The v0.1 doc's actual differentiated bet — vendor-AI-first, healthcare-specific, law-aware reporting, operable without a GRC team — was adopted as the forward direction, and as of this update, fully built (slices 1–5). Its non-goals around runtime enforcement/observability, bias-testing engines, and framework-breadth-chasing (the EasyAudit/Fiddler/Zenity/Darktrace lanes) stand as written.
 
 ## Design approach
 
@@ -39,7 +43,7 @@ Per the 2026-09-14 competitive analysis (`competitive-landscape-2026-09.md`) aga
 - Neither governs deployed third-party/vendor AI well — Credo AI explicitly "cannot audit deployed third-party AI systems," which is most of what healthcare actually runs.
 - Both require enterprise budgets plus a dedicated GRC team to operate (OneTrust setup reportedly takes weeks).
 
-EasyAudit competes on generic compliance-framework breadth, not AI-specific governance, with no healthcare framing. The gap: vendor-AI-first, healthcare-specific, operable by a compliance team of one with no GRC background.
+EasyAudit competes on generic compliance-framework breadth, not AI-specific governance, with no healthcare framing. The gap: vendor-AI-first, healthcare-specific, operable by a compliance team of one with no GRC background. The vendor registry, evidence-category tagging, and law-specific compliance checklists (slices 4–5) are the direct build-out of that gap.
 
 ## Non-goals (explicitly deferred)
 
@@ -49,47 +53,43 @@ EasyAudit competes on generic compliance-framework breadth, not AI-specific gove
 - Model serving infrastructure.
 - Broad red-teaming suite.
 - Chasing framework-checklist breadth for its own sake (SOC 2 + ISO 27001 + ISO 9001 + CMMC-style, à la EasyAudit) — depth on fewer, healthcare-relevant frameworks instead.
-- A legal content engine implying it replaces counsel.
+- A legal content engine implying it replaces counsel — every regulation checklist/trigger in the app is explicitly framed as advisory, not a legal determination.
 - Deep third-party integrations (Jira, Google Workspace/M365, EHR systems) — fast-follows once real usage shows which one matters.
 - Self-serve signup, billing, plan tiers — org creation stays admin/seed-provisioned for now.
 - Configurable/custom workflow builder — stage shape is fixed, content (names/criteria) is data.
-- Email/Slack/notification integrations.
+- Email/Slack/notification integrations — the one exception is the impersonation-notice email, a support/security control, not a product notification system.
 - Mobile app — responsive web only.
 
-## Core entities
+## Core entities (as built)
 
-**Built:**
-- **Organization** — id (= Stytch `organization_id`), name, created_at.
-- **User** — id (= Stytch `member_id`), organization_id, name, email, role (ADMIN/REVIEWER/CONTRIBUTOR).
-- **AiSystem** — id, organization_id, name, owner, business_unit, description, vendor_name (plain text — see below), classification, deployment_status, archived_at.
+- **Organization** — id (= Stytch `organization_id`), name, vertical (nullable, platform-admin-set).
+- **User** — id (= Stytch `member_id`), organization_id, name, email, role (ADMIN/REVIEWER/CONTRIBUTOR), is_platform_admin.
+- **AiSystem** — id, organization_id, name, owner, business_unit, description, vendor_name (free text) + vendor_id (nullable link to Vendor), classification, deployment_status, archived_at.
+- **Vendor** — id, organization_id, name, baa_status, subprocessors, soc2_report_url, model_card_url, notes.
+- **RiskClassification** — id, ai_system_id (unique — current only, not versioned), use_case_template, answers (JSON), risk_tier, triggered_regulations, completed_by, completed_at.
 - **WorkflowStage** — id, ai_system_id, sequence, stage_name, status, owner_user_id, decision_rationale, decided_at. Fixed shape: Intake → Risk Review.
-- **EvidenceItem** — id, ai_system_id, type (file/link), file_url/link_url, label, uploaded_by, uploaded_at. No evidence-type tag yet (see below).
+- **EvidenceItem** — id, ai_system_id, type (file/link), category (BAA/SOC2/model card/bias audit/etc.), file_url/link_url, label, uploaded_by, uploaded_at.
 - **AuditLogEntry** — id, ai_system_id, actor_id, action, detail (JSON), occurred_at.
 - **ApiKey** — id, organization_id, name, key_prefix, key_hash, created_by_id, last_used_at, revoked_at.
+- **ImpersonationSession** — id, platform_admin_id, target_user_id, started_at, expires_at, ended_at.
 
-**Not yet built, per the v0.1 vision:**
-- **Vendor** — linked to systems where external. First-class, not an edge case, since most healthcare AI is vendor SaaS. Captures BAA-on-file status, subprocessor list, and the vendor's own security/model documentation (SOC 2 report, model card) as structured fields, not a free-text link.
-- **Risk Classification** — per system, produced by the intake questionnaire: business criticality, data sensitivity, decision-support vs. automation, human oversight level, regulatory implications, vendor dependency.
-- **Change Event** — logged when a system's key fields change (model, vendor, use case, data sources) — triggers re-review.
-- Evidence-type tagging — so an artifact maps to a specific checklist item ("BAA," "bias audit report," "vendor SOC 2") instead of sitting as an undifferentiated attachment.
+Not yet built: **Change Event** (logged when a system's key fields change — model, vendor, use case, data sources — triggering re-review; slice 6).
 
-## Core user flow (target — partially built)
+## Core user flow (as built)
 
-1. Add a system — manual form, or bulk import (✅ built), or the API (✅ built).
-2. Run intake questionnaire (❌ not built) — a small library of pre-scoped question sets for common healthcare AI use cases (ambient clinical scribe, clinical decision support, prior auth/utilization management, RCM/billing AI, patient-facing chatbot), plus a generic fallback ported from the governedai.co assessment's question bank/scoring logic. Produces a risk classification including which regulations the system likely triggers.
-3. Route through workflow (✅ built, generic — not yet questionnaire-driven) — pending review → approve/request changes/reject with a comment.
-4. Attach evidence (✅ built; evidence-type tagging ❌ not built) — file or link, at any point.
-5. Export report (✅ built, generic; law-specific sections ❌ not built) — inventory record + risk classification + approval history + evidence list. Where a risk classification triggered a specific law, the export should include that law's specific artifact (e.g., an NYC LL144-style bias-audit/candidate-notice section, or a CO SB21-169-style impact-assessment/consumer-notice section) rather than only a generic summary. Likely the single highest-value output — direct answer to "you don't have an AI model problem, you have an AI proof problem."
+1. Add a system — manual form, bulk import, or the API.
+2. Run the intake questionnaire (`/systems/[id]/risk-assessment`) — use-case template or generic fallback → risk tier + triggered regulations.
+3. Route through workflow — pending review → approve/request changes/reject with a comment.
+4. Attach evidence, tagged by category, at any point.
+5. Export a report — CSV (flat audit log) or PDF (full governance report: record + risk classification + per-regulation compliance checklist + workflow history + evidence + audit trail).
 
-Every state change in 1–4 already writes an audit log entry, which is what makes 5 possible without manual reconstruction.
+Every state change in 1–4 writes an audit log entry, which is what makes 5 possible without manual reconstruction.
 
-## Screens
+## Screens (as built)
 
-**Built:** portfolio list, system detail (record + workflow history + evidence + audit trail), add/edit system form, review/approval action (on system detail, no separate queue), report export (CSV/PDF, system-level).
+Dashboard (`/systems`), inventory (`/systems/inventory`), system detail (record + risk classification + workflow + evidence + audit trail, one page), add/edit system form, intake questionnaire, review/approval action (on system detail), report export (CSV/PDF), vendor registry + detail, users/SSO/API-keys admin pages, icon legend, platform global dashboard + per-org support view.
 
-**Not yet built:** intake questionnaire (multi-step, use-case template picker), law-specific export sections, portfolio-level export.
-
-Resist adding a dashboard/analytics view, notifications, or role management beyond owner/reviewer/admin until actual use surfaces the need.
+Not yet built: portfolio-level export.
 
 ## Stack (as built)
 
@@ -97,36 +97,28 @@ Resist adding a dashboard/analytics view, notifications, or role management beyo
 - **Postgres + Prisma** — Neon in production, local Docker Postgres for dev; migrations tracked in repo.
 - **Auth**: Stytch B2B — magic link + per-org SSO (SAML/OIDC), multi-org identity. Production currently runs on Stytch's **Test environment** project (not Live) — functionally identical, real emails sent, but a near-term tradeoff to revisit before scaling past the first org.
 - **File storage**: Cloudflare R2 (S3-compatible) for evidence uploads, local-disk fallback for dev.
+- **Email**: Resend, added solely for the impersonation-started notice (not auth — Stytch remains the only auth-email channel). Needs a Resend account + verified sending domain to actually deliver; the code no-ops gracefully without it.
 - **Hosting**: Vercel, auto-deploys `main`.
-- **PDF export**: server-side (pdfkit) off a report template. Not yet restructured for swappable law-specific partials.
-- **Testing**: Vitest for units, Playwright for the auth-gate smoke test.
-
-## Suggested build sequence (from here)
-
-Each slice a usable increment; 1 is done, 3–4 partially done under the generic model:
-
-1. ~~Auth + system CRUD + portfolio list~~ — done.
-2. **Intake questionnaire + risk classification** — port logic from the governedai.co assessment; include the use-case template picker and regulatory-trigger tagging from the start, since export (slice 5) depends on it. *Recommended next slice.*
-3. Workflow states + review/approval + audit log — done generically; may need adjustment once risk classification exists (e.g., stage requirements varying by risk tier).
-4. Evidence upload/attach with evidence-type tagging + vendor-specific fields (BAA, subprocessor list, vendor SOC 2/model card) — partially done (upload works), tagging and vendor entity don't exist yet.
-5. Report export with law-specific sections for any triggered regulation — CSV/PDF export exists generically, law-specific partials don't.
-6. Change-event detection + recertification trigger — only once 1–5 are solid.
+- **PDF export**: server-side (pdfkit), branded, with per-regulation compliance sections computed from real evidence data.
+- **Testing**: Vitest for units (regulation checklist logic, risk scoring, bulk-import parsing, vendor matching, etc.), Playwright for the auth-gate smoke test.
 
 ## Fast-follow candidates (after initial traction)
 
-- Lightweight shadow-AI self-report intake — not technical agent/SaaS discovery (Zenity/Darktrace's lane), but a department-by-department survey feeding the AiSystem entity, plus a one-time list import if a prospect already has a vendor/SaaS list (bulk CSV/Excel import for this already exists).
+- Lightweight shadow-AI self-report intake — not technical agent/SaaS discovery (Zenity/Darktrace's lane), but a department-by-department survey feeding the AiSystem entity (bulk CSV/Excel import for this already exists).
 - One real third-party integration, prioritized by whatever blocks the first few real users — likely a vendor-list/GRC-tool export before Jira or an EHR system.
+- Portfolio-level report export.
+- Change Event detection + recertification trigger (slice 6).
 
 ## Definition of done for MVP
 
-- 1–5 users can log in, register real AI systems, run at least one through a use-case-specific (or generic) intake questionnaire producing a risk classification, move it through the workflow with a recorded decision, attach at least one real piece of tagged evidence, and export a report — including a law-specific section where triggered — credible enough to hand to an actual auditor.
-- Deployed somewhere reachable without a local dev setup.
-- No data loss / no manual DB surgery needed to keep it running.
+- 1–5 users can log in, register real AI systems, run at least one through a use-case-specific (or generic) intake questionnaire producing a risk classification, move it through the workflow with a recorded decision, attach at least one real piece of tagged evidence, and export a report — including a law-specific compliance checklist where triggered — credible enough to hand to an actual auditor. **Met.**
+- Deployed somewhere reachable without a local dev setup. **Met.**
+- No data loss / no manual DB surgery needed to keep it running. **Met.**
 
 ## Open questions
 
 - When to move Stytch from Test to Live environment — before the first real (non-Bootech) org is provisioned, at the latest.
 - Per-org SSO hasn't been tested against a real IdP yet.
-- Exact question sets for each use-case template (ambient scribe, CDS, prior auth/UM, RCM/billing, patient chatbot) — need drafting against NIST AI RMF / EU AI Act / ISO 42001 / NYC LL144 / CO SB21-169, informed by the governedai.co assessment's existing question bank.
-- Exact law-specific export section content/format for NYC LL144 and CO SB21-169 — needs real regulatory-citation-level drafting, not just a placeholder heading.
+- Resend account/domain verification not yet set up — impersonation emails currently no-op.
 - Whether risk classification should gate workflow stage requirements (e.g., a higher-risk system needing an extra review stage) — not decided yet.
+- Whether/when to pursue Change Event detection (slice 6) vs. other fast-follows.
