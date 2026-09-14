@@ -24,3 +24,7 @@ export function canDecideStage(role: UserRole) {
 export function canManageUsers(role: UserRole) {
   return role === "ADMIN";
 }
+
+export function canManageSso(role: UserRole) {
+  return role === "ADMIN";
+}

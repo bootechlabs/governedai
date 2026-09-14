@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUserOrNull } from "@/lib/current-user";
-import { canManageUsers } from "@/lib/permissions";
+import { canManageUsers, canManageSso } from "@/lib/permissions";
 import { getSessionCookie, clearSessionCookie } from "@/lib/session";
 import { stytchClient } from "@/lib/stytch";
 
@@ -23,6 +23,11 @@ export default async function SystemsLayout({
           {canManageUsers(user.role) && (
             <Link href="/systems/users" className="hover:underline">
               Manage users
+            </Link>
+          )}
+          {canManageSso(user.role) && (
+            <Link href="/systems/sso" className="hover:underline">
+              SSO
             </Link>
           )}
           <span>

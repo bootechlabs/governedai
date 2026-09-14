@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import { canManageUsers } from "@/lib/permissions";
 import { stytchClient } from "@/lib/stytch";
+import { currentOrigin } from "@/lib/url";
 import type { UserRole } from "@prisma/client";
 
 async function requireAdmin() {
@@ -14,11 +15,6 @@ async function requireAdmin() {
     throw new Error("Only admins can manage users");
   }
   return actor;
-}
-
-function currentOrigin(host: string) {
-  const isLocal = host.startsWith("localhost") || host.startsWith("127.0.0.1");
-  return `${isLocal ? "http" : "https"}://${host}`;
 }
 
 // Provisioning a user means both: creating them as a Stytch Member (so

@@ -1,8 +1,14 @@
 import { redirect } from "next/navigation";
-import { sendMagicLink } from "./actions";
+import { sendMagicLink, startSsoLogin } from "./actions";
 import { inputClass, primaryButtonClass } from "@/lib/ui";
 
-export default function SignInPage() {
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sso?: string }>;
+}) {
+  const { sso } = await searchParams;
+
   return (
     <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
       <h1 className="text-xl font-semibold tracking-tight">Sign in to GovernedAI</h1>
@@ -28,6 +34,32 @@ export default function SignInPage() {
           Send magic link
         </button>
       </form>
+
+      <div className="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+        <p className="text-sm text-zinc-500">
+          Or, if your organization uses single sign-on:
+        </p>
+        <form action={startSsoLogin} className="mt-3 flex flex-col gap-3">
+          <input
+            type="email"
+            name="email"
+            placeholder="you@company.com"
+            required
+            className={inputClass}
+          />
+          <button
+            type="submit"
+            className="rounded border border-zinc-300 px-3 py-1.5 text-sm font-medium dark:border-zinc-700"
+          >
+            Continue with SSO
+          </button>
+        </form>
+        {sso === "unavailable" && (
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+            SSO isn&apos;t set up for that email yet — try a magic link instead.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
