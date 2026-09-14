@@ -370,14 +370,14 @@ export default async function SystemDetailPage({
             className={`inline-flex items-center gap-1.5 ${subtleLinkClass}`}
           >
             <FileSpreadsheet size={14} />
-            Export CSV
+            Audit log (CSV)
           </a>
           <a
             href={`/systems/${system.id}/audit?format=pdf`}
             className={`inline-flex items-center gap-1.5 ${subtleLinkClass}`}
           >
             <FileText size={14} />
-            Export PDF
+            Full report (PDF)
           </a>
         </div>
       </div>
