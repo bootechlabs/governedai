@@ -16,8 +16,11 @@ test("home page renders for anonymous visitors", async ({ page }) => {
 test("sign-in page renders the magic-link form", async ({ page }) => {
   await page.goto("/sign-in");
   await expect(page.getByRole("heading", { name: "Sign in to GovernedAI" })).toBeVisible();
-  await expect(page.getByPlaceholder("you@company.com")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Send magic link" })).toBeVisible();
+  // Scoped to this form specifically — the SSO form below it shares the
+  // same email placeholder.
+  const magicLinkForm = page.locator("form").filter({ hasText: "Send magic link" });
+  await expect(magicLinkForm.getByPlaceholder("you@company.com")).toBeVisible();
+  await expect(magicLinkForm.getByRole("button", { name: "Send magic link" })).toBeVisible();
 });
 
 for (const path of ["/systems", "/systems/some-id", "/systems/users"]) {
@@ -32,8 +35,9 @@ test("an unprovisioned email is rejected with the custom error page, not Auth.js
   page,
 }) => {
   await page.goto("/sign-in");
-  await page.getByPlaceholder("you@company.com").fill("nobody-provisioned@example.com");
-  await page.getByRole("button", { name: "Send magic link" }).click();
+  const magicLinkForm = page.locator("form").filter({ hasText: "Send magic link" });
+  await magicLinkForm.getByPlaceholder("you@company.com").fill("nobody-provisioned@example.com");
+  await magicLinkForm.getByRole("button", { name: "Send magic link" }).click();
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
 
   // The actual rejection happens server-side in sendMagicLink (see
