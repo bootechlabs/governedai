@@ -41,12 +41,19 @@ export default async function SystemsPage({
         <h1 className="text-2xl font-semibold tracking-tight">
           {showArchived ? "Archived AI systems" : "AI system inventory"}
         </h1>
-        <Link
-          href={showArchived ? "/systems" : "/systems?archived=1"}
-          className={subtleLinkClass}
-        >
-          {showArchived ? `← Active (${activeCount})` : `Archived (${archivedCount})`}
-        </Link>
+        <div className="flex items-center gap-4">
+          {canCreate && !showArchived && (
+            <Link href="/systems/import" className={subtleLinkClass}>
+              Bulk import
+            </Link>
+          )}
+          <Link
+            href={showArchived ? "/systems" : "/systems?archived=1"}
+            className={subtleLinkClass}
+          >
+            {showArchived ? `← Active (${activeCount})` : `Archived (${archivedCount})`}
+          </Link>
+        </div>
       </div>
 
       <form id="new-system-form" action={createAiSystem} />

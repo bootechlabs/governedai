@@ -58,6 +58,7 @@ model Organization {
 
   users     User[]
   aiSystems AiSystem[]
+  apiKeys   ApiKey[]
 }
 
 // Mirrors a Stytch B2B Member. id = Stytch's member_id. Role is local-only
@@ -76,6 +77,7 @@ model User {
   ownedStages      WorkflowStage[] @relation("StageOwner")
   uploadedEvidence EvidenceItem[]  @relation("EvidenceUploader")
   auditEntries     AuditLogEntry[] @relation("AuditActor")
+  createdApiKeys   ApiKey[]        @relation("ApiKeyCreator")
 
   @@unique([organizationId, email])
 }
@@ -143,6 +145,27 @@ model EvidenceItem {
   uploadedById String
 
   uploadedAt DateTime @default(now())
+}
+
+// The public API (see src/app/api/v1) authenticates with one of these per
+// org, admin-generated. Only a sha256 hash is stored — the plaintext key
+// is shown once at creation and never persisted, same as a password.
+model ApiKey {
+  id        String   @id @default(cuid())
+  name      String
+  keyPrefix String
+  keyHash   String   @unique
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime?
+  revokedAt DateTime?
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+
+  createdBy   User   @relation("ApiKeyCreator", fields: [createdById], references: [id])
+  createdById String
+
+  @@index([organizationId])
 }
 
 // Immutable by convention: application code must only insert, never update/delete rows here.

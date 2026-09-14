@@ -28,3 +28,7 @@ export function canManageUsers(role: UserRole) {
 export function canManageSso(role: UserRole) {
   return role === "ADMIN";
 }
+
+export function canManageApiKeys(role: UserRole) {
+  return role === "ADMIN";
+}

@@ -4,9 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
-import { DEFAULT_WORKFLOW_STAGES } from "@/lib/workflow";
 import { uploadEvidenceFile } from "@/lib/storage";
 import { logAuditEntry } from "@/lib/audit-log";
+import { createAiSystemRecord } from "@/lib/ai-systems";
 import { canCreateSystem, canManageSystem, canDecideStage } from "@/lib/permissions";
 import type { DataClassification, DeploymentStatus, StageStatus } from "@prisma/client";
 
@@ -55,25 +55,11 @@ export async function createAiSystem(formData: FormData) {
     throw new Error("Your role can't register new AI systems");
   }
 
-  const system = await prisma.aiSystem.create({
-    data: {
-      ...fields,
-      organizationId: owner.organizationId,
-      ownerId: owner.id,
-      stages: {
-        create: DEFAULT_WORKFLOW_STAGES.map((stage) => ({
-          stageName: stage.stageName,
-          sequence: stage.sequence,
-        })),
-      },
-    },
-  });
-
-  await logAuditEntry({
-    aiSystemId: system.id,
+  const system = await createAiSystemRecord({
+    organizationId: owner.organizationId,
+    ownerId: owner.id,
     actorId: owner.id,
-    action: "system_created",
-    detail: fields,
+    fields,
   });
 
   revalidatePath("/systems");
