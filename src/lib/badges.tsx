@@ -15,9 +15,21 @@ import {
   Gauge,
   AlertTriangle,
   Flame,
+  FileCheck2,
+  FileWarning,
+  FileClock,
+  FileX2,
+  Tag,
   type LucideIcon,
 } from "lucide-react";
-import type { DataClassification, DeploymentStatus, StageStatus, RiskTier } from "@prisma/client";
+import type {
+  DataClassification,
+  DeploymentStatus,
+  StageStatus,
+  RiskTier,
+  BaaStatus,
+  EvidenceCategory,
+} from "@prisma/client";
 
 function Badge({
   icon: Icon,
@@ -96,4 +108,37 @@ const riskTierConfig: Record<RiskTier, { icon: LucideIcon; label: string; colorC
 export function RiskTierBadge({ value }: { value: RiskTier }) {
   const config = riskTierConfig[value];
   return <Badge icon={config.icon} label={config.label} colorClass={config.colorClass} />;
+}
+
+const baaStatusConfig: Record<BaaStatus, { icon: LucideIcon; label: string; colorClass: string }> = {
+  NOT_APPLICABLE: { icon: FileX2, label: "BAA not applicable", colorClass: "text-zinc-500" },
+  REQUIRED_NOT_ON_FILE: {
+    icon: FileWarning,
+    label: "BAA required, not on file",
+    colorClass: "text-red-600 dark:text-red-400",
+  },
+  ON_FILE: { icon: FileCheck2, label: "BAA on file", colorClass: "text-emerald-600 dark:text-emerald-400" },
+  EXPIRED: { icon: FileClock, label: "BAA expired", colorClass: "text-amber-600 dark:text-amber-400" },
+};
+
+export function BaaStatusBadge({ value }: { value: BaaStatus }) {
+  const config = baaStatusConfig[value];
+  return <Badge icon={config.icon} label={config.label} colorClass={config.colorClass} />;
+}
+
+export const evidenceCategoryLabels: Record<EvidenceCategory, string> = {
+  GENERAL: "General",
+  BAA: "BAA",
+  SOC2_REPORT: "SOC 2 report",
+  MODEL_CARD: "Model card",
+  BIAS_AUDIT_REPORT: "Bias audit report",
+  TEST_RESULT: "Test result",
+  APPROVAL_RECORD: "Approval record",
+  POLICY_DOCUMENT: "Policy document",
+  SUBPROCESSOR_LIST: "Subprocessor list",
+  OTHER: "Other",
+};
+
+export function EvidenceCategoryBadge({ value }: { value: EvidenceCategory }) {
+  return <Badge icon={Tag} label={evidenceCategoryLabels[value]} colorClass="text-zinc-500" />;
 }

@@ -6,9 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import { uploadEvidenceFile } from "@/lib/storage";
 import { logAuditEntry } from "@/lib/audit-log";
-import { createAiSystemRecord, assertSystemEditable } from "@/lib/ai-systems";
+import { createAiSystemRecord, assertSystemEditable, resolveVendorId } from "@/lib/ai-systems";
 import { canCreateSystem, canManageSystem, canDecideStage } from "@/lib/permissions";
-import type { DataClassification, DeploymentStatus, StageStatus } from "@prisma/client";
+import type { DataClassification, DeploymentStatus, StageStatus, EvidenceCategory } from "@prisma/client";
 
 function parseAiSystemFields(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
@@ -55,8 +55,9 @@ export async function updateAiSystem(aiSystemId: string, formData: FormData) {
   }
 
   const before = await assertSystemEditable(aiSystemId, actor.organizationId);
+  const vendorId = await resolveVendorId(actor.organizationId, fields.vendorName);
 
-  await prisma.aiSystem.update({ where: { id: aiSystemId }, data: fields });
+  await prisma.aiSystem.update({ where: { id: aiSystemId }, data: { ...fields, vendorId } });
 
   await logAuditEntry({
     aiSystemId,
@@ -187,6 +188,7 @@ export async function attachEvidence(aiSystemId: string, formData: FormData) {
   const label = String(formData.get("label") ?? "").trim() || null;
   const linkUrl = String(formData.get("linkUrl") ?? "").trim();
   const workflowStageId = String(formData.get("workflowStageId") ?? "") || null;
+  const category = String(formData.get("category") ?? "GENERAL") as EvidenceCategory;
   const file = formData.get("file");
 
   const actor = await getCurrentUser();
@@ -200,6 +202,7 @@ export async function attachEvidence(aiSystemId: string, formData: FormData) {
         aiSystemId,
         workflowStageId,
         type: "FILE",
+        category,
         fileUrl,
         label: label ?? file.name,
         uploadedById: actor.id,
@@ -211,6 +214,7 @@ export async function attachEvidence(aiSystemId: string, formData: FormData) {
         aiSystemId,
         workflowStageId,
         type: "LINK",
+        category,
         linkUrl,
         label,
         uploadedById: actor.id,
@@ -224,7 +228,7 @@ export async function attachEvidence(aiSystemId: string, formData: FormData) {
     aiSystemId,
     actorId: actor.id,
     action: "evidence_attached",
-    detail: { evidenceId: evidence.id, type: evidence.type, label: evidence.label },
+    detail: { evidenceId: evidence.id, type: evidence.type, category: evidence.category, label: evidence.label },
   });
 
   revalidatePath(`/systems/${aiSystemId}`);

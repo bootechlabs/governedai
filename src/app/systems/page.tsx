@@ -23,7 +23,7 @@ export default async function SystemsPage({
   const canCreate = canCreateSystem(actor.role);
 
   const orgId = actor.organizationId;
-  const [systems, activeCount, archivedCount] = await Promise.all([
+  const [systems, activeCount, archivedCount, vendors] = await Promise.all([
     prisma.aiSystem.findMany({
       where: showArchived
         ? { organizationId: orgId, archivedAt: { not: null } }
@@ -33,6 +33,7 @@ export default async function SystemsPage({
     }),
     prisma.aiSystem.count({ where: { organizationId: orgId, archivedAt: null } }),
     prisma.aiSystem.count({ where: { organizationId: orgId, archivedAt: { not: null } } }),
+    prisma.vendor.findMany({ where: { organizationId: orgId }, select: { name: true } }),
   ]);
 
   return (
@@ -57,6 +58,11 @@ export default async function SystemsPage({
       </div>
 
       <form id="new-system-form" action={createAiSystem} />
+      <datalist id="vendor-names">
+        {vendors.map((v) => (
+          <option key={v.name} value={v.name} />
+        ))}
+      </datalist>
 
       <div
         role="table"
@@ -113,6 +119,7 @@ export default async function SystemsPage({
                 form="new-system-form"
                 name="vendorName"
                 placeholder="Vendor"
+                list="vendor-names"
                 className={cellInputClass}
               />
             </span>

@@ -9,7 +9,15 @@ import {
   archiveAiSystem,
   unarchiveAiSystem,
 } from "../actions";
-import { ClassificationBadge, DeploymentStatusBadge, StageStatusBadge, RiskTierBadge } from "@/lib/badges";
+import {
+  ClassificationBadge,
+  DeploymentStatusBadge,
+  StageStatusBadge,
+  RiskTierBadge,
+  BaaStatusBadge,
+  EvidenceCategoryBadge,
+  evidenceCategoryLabels,
+} from "@/lib/badges";
 import { isStageActionable } from "@/lib/workflow";
 import { USE_CASE_TEMPLATE_LABELS, REGULATION_LABELS } from "@/lib/risk-classification";
 import { inputClass, primaryButtonClass, subtleLinkClass } from "@/lib/ui";
@@ -35,10 +43,16 @@ export default async function SystemDetailPage({
       evidence: { orderBy: { uploadedAt: "desc" }, include: { uploadedBy: true } },
       auditLog: { orderBy: { occurredAt: "desc" }, include: { actor: true } },
       riskClassification: { include: { completedBy: true } },
+      vendor: true,
     },
   });
 
   if (!system) notFound();
+
+  const vendors = await prisma.vendor.findMany({
+    where: { organizationId: actor.organizationId },
+    select: { name: true },
+  });
 
   const isArchived = !!system.archivedAt;
   const canManage = canManageSystem(actor.role);
@@ -63,8 +77,32 @@ export default async function SystemDetailPage({
         <span>Owner: {system.owner.name ?? system.owner.email}</span>
         <DeploymentStatusBadge value={system.deploymentStatus} />
         <ClassificationBadge value={system.classification} />
-        {system.vendorName && <span>Vendor: {system.vendorName}</span>}
+        {!system.vendor && system.vendorName && <span>Vendor: {system.vendorName}</span>}
       </div>
+      {system.vendor && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800">
+          <Link href={`/systems/vendors/${system.vendor.id}`} className="font-medium underline hover:no-underline">
+            {system.vendor.name}
+          </Link>
+          <BaaStatusBadge value={system.vendor.baaStatus} />
+          {system.vendor.subprocessors.length > 0 && (
+            <span className="text-xs text-zinc-500">
+              {system.vendor.subprocessors.length} subprocessor
+              {system.vendor.subprocessors.length === 1 ? "" : "s"}
+            </span>
+          )}
+          {system.vendor.soc2ReportUrl && (
+            <a href={system.vendor.soc2ReportUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline hover:no-underline">
+              SOC 2 report
+            </a>
+          )}
+          {system.vendor.modelCardUrl && (
+            <a href={system.vendor.modelCardUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline hover:no-underline">
+              Model card
+            </a>
+          )}
+        </div>
+      )}
       {system.description && (
         <p className="mt-3 text-sm text-zinc-700 dark:text-zinc-300">
           {system.description}
@@ -104,6 +142,7 @@ export default async function SystemDetailPage({
                   name="vendorName"
                   defaultValue={system.vendorName ?? ""}
                   placeholder="Vendor"
+                  list="vendor-names"
                   className={inputClass}
                 />
               </div>
@@ -132,6 +171,11 @@ export default async function SystemDetailPage({
               <button type="submit" className={`self-start ${primaryButtonClass}`}>
                 Save changes
               </button>
+              <datalist id="vendor-names">
+                {vendors.map((v) => (
+                  <option key={v.name} value={v.name} />
+                ))}
+              </datalist>
             </form>
           )}
           <div className="mt-4 flex items-center gap-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
@@ -263,6 +307,13 @@ export default async function SystemDetailPage({
             className={`flex-1 ${inputClass}`}
           />
           <input name="label" placeholder="Label (optional)" className={inputClass} />
+          <select name="category" defaultValue="GENERAL" className={inputClass}>
+            {Object.entries(evidenceCategoryLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
           <button type="submit" className={primaryButtonClass}>
             Attach
           </button>
@@ -282,6 +333,7 @@ export default async function SystemDetailPage({
             >
               {item.label ?? item.fileUrl ?? item.linkUrl}
             </a>
+            <EvidenceCategoryBadge value={item.category} />
             <span className="text-xs text-zinc-500">
               ({item.type.toLowerCase()}) — {item.uploadedBy.name ?? item.uploadedBy.email}
             </span>

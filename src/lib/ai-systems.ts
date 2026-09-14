@@ -21,9 +21,6 @@ export function serializeAiSystem(system: AiSystem) {
   };
 }
 
-// Three entry points create an AiSystem the same way — the UI form, bulk
-// import, and the public API — so the "create with default stages, then
-// log it" sequence lives in one place instead of three.
 // Every mutation on an AiSystem needs two checks: it belongs to the
 // actor's own organization (otherwise a user in one org could act on
 // another org's data just by knowing/guessing an id — there's no other
@@ -43,22 +40,61 @@ export async function assertSystemEditable(aiSystemId: string, organizationId: s
   return system;
 }
 
+// Pure — takes an already-fetched vendor list so bulk import can resolve
+// many rows without a query each; the async wrapper below covers the
+// single-record paths (UI create/edit, API create) where one query is fine.
+export function matchVendorByName(
+  vendors: { id: string; name: string }[],
+  vendorName: string | null,
+): string | null {
+  if (!vendorName) return null;
+  const normalized = vendorName.trim().toLowerCase();
+  if (!normalized) return null;
+  return vendors.find((v) => v.name.trim().toLowerCase() === normalized)?.id ?? null;
+}
+
+export async function resolveVendorId(
+  organizationId: string,
+  vendorName: string | null,
+): Promise<string | null> {
+  if (!vendorName) return null;
+  const vendors = await prisma.vendor.findMany({
+    where: { organizationId },
+    select: { id: true, name: true },
+  });
+  return matchVendorByName(vendors, vendorName);
+}
+
+// Three entry points create an AiSystem the same way — the UI form, bulk
+// import, and the public API — so the "create with default stages, then
+// log it" sequence lives in one place instead of three.
 export async function createAiSystemRecord({
   organizationId,
   ownerId,
   actorId,
   fields,
   auditDetail,
+  vendorId: preResolvedVendorId,
 }: {
   organizationId: string;
   ownerId: string;
   actorId: string;
   fields: AiSystemFieldInput;
   auditDetail?: Prisma.InputJsonValue;
+  // Bulk import prefetches the org's vendor list once and passes the
+  // match in directly, to avoid one lookup query per row; every other
+  // caller omits this and gets a single per-call lookup instead.
+  vendorId?: string | null;
 }) {
+  const vendorId =
+    preResolvedVendorId !== undefined
+      ? preResolvedVendorId
+      : await resolveVendorId(organizationId, fields.vendorName);
+
   const system = await prisma.aiSystem.create({
     data: {
       ...fields,
+      vendorId,
       organizationId,
       ownerId,
       stages: {

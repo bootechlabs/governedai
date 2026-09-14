@@ -74,6 +74,26 @@ enum Regulation {
   CO_SB21_169
 }
 
+enum BaaStatus {
+  NOT_APPLICABLE
+  REQUIRED_NOT_ON_FILE
+  ON_FILE
+  EXPIRED
+}
+
+enum EvidenceCategory {
+  GENERAL
+  BAA
+  SOC2_REPORT
+  MODEL_CARD
+  BIAS_AUDIT_REPORT
+  TEST_RESULT
+  APPROVAL_RECORD
+  POLICY_DOCUMENT
+  SUBPROCESSOR_LIST
+  OTHER
+}
+
 // Mirrors a Stytch B2B Organization. id = Stytch's organization_id.
 model Organization {
   id        String   @id
@@ -83,6 +103,32 @@ model Organization {
   users     User[]
   aiSystems AiSystem[]
   apiKeys   ApiKey[]
+  vendors   Vendor[]
+}
+
+// Admin-managed vendor registry — additive to AiSystem.vendorName (free
+// text, still what bulk import/API/quick-add write), not a replacement.
+// A system auto-links to a Vendor when its vendorName exactly matches
+// one in the org (see src/lib/ai-systems.ts matchVendorByName), so
+// nothing already shipped had to change to benefit from this.
+model Vendor {
+  id            String    @id @default(cuid())
+  name          String
+  baaStatus     BaaStatus @default(REQUIRED_NOT_ON_FILE)
+  subprocessors String[]
+  soc2ReportUrl String?
+  modelCardUrl  String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+
+  aiSystems AiSystem[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
 }
 
 // Mirrors a Stytch B2B Member. id = Stytch's member_id. Role is local-only
@@ -114,6 +160,8 @@ model AiSystem {
   businessUnit     String?
   vendorName       String?
   classification   DataClassification @default(INTERNAL)
+  vendor           Vendor?            @relation(fields: [vendorId], references: [id])
+  vendorId         String?
   deploymentStatus DeploymentStatus   @default(PLANNED)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
@@ -174,11 +222,12 @@ model WorkflowStage {
 }
 
 model EvidenceItem {
-  id      String       @id @default(cuid())
-  type    EvidenceType
-  fileUrl String?
-  linkUrl String?
-  label   String?
+  id       String           @id @default(cuid())
+  type     EvidenceType
+  category EvidenceCategory @default(GENERAL)
+  fileUrl  String?
+  linkUrl  String?
+  label    String?
 
   aiSystem   AiSystem @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
   aiSystemId String

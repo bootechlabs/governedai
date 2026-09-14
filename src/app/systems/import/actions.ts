@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import { canCreateSystem } from "@/lib/permissions";
 import { parseImportFile, validateImportRow } from "@/lib/bulk-import";
-import { createAiSystemRecord } from "@/lib/ai-systems";
+import { createAiSystemRecord, matchVendorByName } from "@/lib/ai-systems";
 
 export interface ImportResult {
   created: number;
@@ -28,6 +29,11 @@ export async function importAiSystems(
   const buffer = Buffer.from(await file.arrayBuffer());
   const rows = parseImportFile(buffer);
 
+  const vendors = await prisma.vendor.findMany({
+    where: { organizationId: actor.organizationId },
+    select: { id: true, name: true },
+  });
+
   const errors: ImportResult["errors"] = [];
   let created = 0;
 
@@ -45,6 +51,7 @@ export async function importAiSystems(
         ownerId: actor.id,
         actorId: actor.id,
         fields,
+        vendorId: matchVendorByName(vendors, fields.vendorName),
         auditDetail: { ...fields, source: "bulk_import" },
       });
       created++;

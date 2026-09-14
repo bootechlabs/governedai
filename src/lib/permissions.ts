@@ -32,3 +32,7 @@ export function canManageSso(role: UserRole) {
 export function canManageApiKeys(role: UserRole) {
   return role === "ADMIN";
 }
+
+export function canManageVendors(role: UserRole) {
+  return role === "ADMIN";
+}

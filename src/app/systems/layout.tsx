@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUserOrNull } from "@/lib/current-user";
-import { canManageUsers, canManageSso, canManageApiKeys } from "@/lib/permissions";
+import { canManageUsers, canManageSso, canManageApiKeys, canManageVendors } from "@/lib/permissions";
 import { getSessionCookie, clearSessionCookie } from "@/lib/session";
 import { stytchClient } from "@/lib/stytch";
 
@@ -33,6 +33,11 @@ export default async function SystemsLayout({
           {canManageApiKeys(user.role) && (
             <Link href="/systems/api-keys" className="hover:underline">
               API keys
+            </Link>
+          )}
+          {canManageVendors(user.role) && (
+            <Link href="/systems/vendors" className="hover:underline">
+              Vendors
             </Link>
           )}
           <span>
