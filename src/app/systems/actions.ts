@@ -6,28 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import { uploadEvidenceFile } from "@/lib/storage";
 import { logAuditEntry } from "@/lib/audit-log";
-import { createAiSystemRecord } from "@/lib/ai-systems";
+import { createAiSystemRecord, assertSystemEditable } from "@/lib/ai-systems";
 import { canCreateSystem, canManageSystem, canDecideStage } from "@/lib/permissions";
 import type { DataClassification, DeploymentStatus, StageStatus } from "@prisma/client";
-
-// Every mutation on an AiSystem needs two checks: it belongs to the
-// actor's own organization (otherwise a user in one org could act on
-// another org's data just by knowing/guessing an id — there's no other
-// gate, since ids aren't secret), and it isn't archived (frozen —
-// workflow/evidence/audit history stays reviewable, but nothing about it
-// should keep changing underneath that history). Enforced here, not just
-// hidden in the UI, since a bound form action can still be POSTed to
-// directly.
-async function assertSystemEditable(aiSystemId: string, organizationId: string) {
-  const system = await prisma.aiSystem.findUniqueOrThrow({ where: { id: aiSystemId } });
-  if (system.organizationId !== organizationId) {
-    throw new Error("Not found");
-  }
-  if (system.archivedAt) {
-    throw new Error("This AI system is archived — unarchive it before making changes.");
-  }
-  return system;
-}
 
 function parseAiSystemFields(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();

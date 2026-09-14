@@ -50,6 +50,30 @@ enum EvidenceType {
   LINK
 }
 
+enum UseCaseTemplate {
+  AMBIENT_SCRIBE
+  CLINICAL_DECISION_SUPPORT
+  PRIOR_AUTH_UM
+  RCM_BILLING
+  PATIENT_CHATBOT
+  GENERIC
+}
+
+enum RiskTier {
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum Regulation {
+  NIST_AI_RMF
+  EU_AI_ACT
+  ISO_42001
+  NYC_LL144
+  CO_SB21_169
+}
+
 // Mirrors a Stytch B2B Organization. id = Stytch's organization_id.
 model Organization {
   id        String   @id
@@ -78,6 +102,7 @@ model User {
   uploadedEvidence EvidenceItem[]  @relation("EvidenceUploader")
   auditEntries     AuditLogEntry[] @relation("AuditActor")
   createdApiKeys   ApiKey[]        @relation("ApiKeyCreator")
+  riskClassificationsCompleted RiskClassification[] @relation("RiskClassificationCompleter")
 
   @@unique([organizationId, email])
 }
@@ -100,11 +125,31 @@ model AiSystem {
   owner   User   @relation("SystemOwner", fields: [ownerId], references: [id])
   ownerId String
 
-  stages   WorkflowStage[]
-  evidence EvidenceItem[]
-  auditLog AuditLogEntry[]
+  stages             WorkflowStage[]
+  evidence           EvidenceItem[]
+  auditLog           AuditLogEntry[]
+  riskClassification RiskClassification?
 
   @@index([organizationId])
+}
+
+// Produced by the intake questionnaire (src/lib/risk-classification.ts) —
+// one current classification per system, not versioned; retaking it
+// overwrites this row, with history preserved via a "risk_classified"
+// AuditLogEntry on every run (same pattern as every other mutation).
+model RiskClassification {
+  id                   String           @id @default(cuid())
+  useCaseTemplate      UseCaseTemplate
+  answers              Json
+  riskTier             RiskTier
+  triggeredRegulations Regulation[]
+  completedAt          DateTime         @default(now())
+
+  aiSystem   AiSystem @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+  aiSystemId String   @unique
+
+  completedBy   User   @relation("RiskClassificationCompleter", fields: [completedById], references: [id])
+  completedById String
 }
 
 // Fixed MVP stage sequence (see mvp-scope.md): Intake -> Risk Review -> decision.

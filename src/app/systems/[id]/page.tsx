@@ -9,12 +9,13 @@ import {
   archiveAiSystem,
   unarchiveAiSystem,
 } from "../actions";
-import { ClassificationBadge, DeploymentStatusBadge, StageStatusBadge } from "@/lib/badges";
+import { ClassificationBadge, DeploymentStatusBadge, StageStatusBadge, RiskTierBadge } from "@/lib/badges";
 import { isStageActionable } from "@/lib/workflow";
+import { USE_CASE_TEMPLATE_LABELS, REGULATION_LABELS } from "@/lib/risk-classification";
 import { inputClass, primaryButtonClass, subtleLinkClass } from "@/lib/ui";
 import { DeleteSystemButton } from "./delete-button";
 import { getCurrentUser } from "@/lib/current-user";
-import { canManageSystem, canDecideStage } from "@/lib/permissions";
+import { canManageSystem, canDecideStage, canCreateSystem } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,7 @@ export default async function SystemDetailPage({
       stages: { orderBy: { sequence: "asc" }, include: { owner: true } },
       evidence: { orderBy: { uploadedAt: "desc" }, include: { uploadedBy: true } },
       auditLog: { orderBy: { occurredAt: "desc" }, include: { actor: true } },
+      riskClassification: { include: { completedBy: true } },
     },
   });
 
@@ -41,6 +43,7 @@ export default async function SystemDetailPage({
   const isArchived = !!system.archivedAt;
   const canManage = canManageSystem(actor.role);
   const canDecide = canDecideStage(actor.role);
+  const canAssessRisk = canCreateSystem(actor.role);
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
@@ -149,6 +152,53 @@ export default async function SystemDetailPage({
           </div>
         </div>
       </details>
+      )}
+
+      <h2 className="mt-10 text-lg font-medium">Risk classification</h2>
+      {system.riskClassification ? (
+        <div className="mt-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+          <div className="flex flex-wrap items-center gap-3">
+            <RiskTierBadge value={system.riskClassification.riskTier} />
+            <span className="text-sm text-zinc-500">
+              {USE_CASE_TEMPLATE_LABELS[system.riskClassification.useCaseTemplate]}
+            </span>
+          </div>
+          {system.riskClassification.triggeredRegulations.length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs text-zinc-500">
+                Likely applies — verify with counsel, this is not a legal determination:
+              </p>
+              <ul className="mt-1 flex flex-wrap gap-2">
+                {system.riskClassification.triggeredRegulations.map((reg) => (
+                  <li
+                    key={reg}
+                    className="rounded bg-zinc-100 px-2 py-0.5 text-xs dark:bg-zinc-800"
+                  >
+                    {REGULATION_LABELS[reg]}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <p className="mt-3 text-xs text-zinc-500">
+            Assessed by {system.riskClassification.completedBy.name ?? system.riskClassification.completedBy.email}{" "}
+            on {system.riskClassification.completedAt.toISOString().slice(0, 10)}
+          </p>
+          {canAssessRisk && !isArchived && (
+            <Link href={`/systems/${system.id}/risk-assessment`} className={`mt-3 inline-block text-sm ${subtleLinkClass}`}>
+              Retake assessment
+            </Link>
+          )}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-lg border border-zinc-200 p-4 text-sm text-zinc-500 dark:border-zinc-800">
+          No risk assessment yet.{" "}
+          {canAssessRisk && !isArchived && (
+            <Link href={`/systems/${system.id}/risk-assessment`} className="underline hover:no-underline">
+              Run risk assessment
+            </Link>
+          )}
+        </div>
       )}
 
       <h2 className="mt-10 text-lg font-medium">Workflow</h2>

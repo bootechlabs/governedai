@@ -12,9 +12,12 @@ import {
   CheckCircle2,
   ShieldCheck,
   XCircle,
+  Gauge,
+  AlertTriangle,
+  Flame,
   type LucideIcon,
 } from "lucide-react";
-import type { DataClassification, DeploymentStatus, StageStatus } from "@prisma/client";
+import type { DataClassification, DeploymentStatus, StageStatus, RiskTier } from "@prisma/client";
 
 function Badge({
   icon: Icon,
@@ -80,5 +83,17 @@ const stageStatusConfig: Record<
 
 export function StageStatusBadge({ value }: { value: StageStatus }) {
   const config = stageStatusConfig[value];
+  return <Badge icon={config.icon} label={config.label} colorClass={config.colorClass} />;
+}
+
+const riskTierConfig: Record<RiskTier, { icon: LucideIcon; label: string; colorClass: string }> = {
+  LOW: { icon: Gauge, label: "Low risk", colorClass: "text-zinc-500" },
+  MODERATE: { icon: Gauge, label: "Moderate risk", colorClass: "text-amber-600 dark:text-amber-400" },
+  HIGH: { icon: AlertTriangle, label: "High risk", colorClass: "text-orange-600 dark:text-orange-400" },
+  CRITICAL: { icon: Flame, label: "Critical risk", colorClass: "text-red-600 dark:text-red-400" },
+};
+
+export function RiskTierBadge({ value }: { value: RiskTier }) {
+  const config = riskTierConfig[value];
   return <Badge icon={config.icon} label={config.label} colorClass={config.colorClass} />;
 }
