@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import { canManageVendors } from "@/lib/permissions";
@@ -33,8 +34,9 @@ export default async function VendorDetailPage({
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">
-      <Link href="/systems/vendors" className="text-sm text-zinc-500 hover:underline">
-        ← All vendors
+      <Link href="/systems/vendors" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:underline">
+        <ArrowLeft size={14} />
+        All vendors
       </Link>
 
       <h1 className="mt-2 text-2xl font-semibold tracking-tight">{vendor.name}</h1>

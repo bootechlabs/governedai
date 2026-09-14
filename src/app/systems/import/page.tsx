@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, Upload } from "lucide-react";
 import { getCurrentUser } from "@/lib/current-user";
 import { canCreateSystem } from "@/lib/permissions";
 import { subtleLinkClass } from "@/lib/ui";
@@ -13,11 +14,15 @@ export default async function ImportPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">
-      <Link href="/systems" className="text-sm text-zinc-500 hover:underline">
-        ← All systems
+      <Link href="/systems/inventory" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:underline">
+        <ArrowLeft size={14} />
+        All systems
       </Link>
 
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight">Bulk import</h1>
+      <h1 className="mt-2 flex items-center gap-2 text-2xl font-semibold tracking-tight">
+        <Upload size={22} />
+        Bulk import
+      </h1>
       <p className="mt-1 text-sm text-zinc-500">
         Upload a CSV or Excel file to register multiple AI systems at once. Each row becomes a
         new system, owned by you, with the default workflow stages attached — the same as adding

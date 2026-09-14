@@ -1,6 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { FileSpreadsheet, FileText } from "lucide-react";
+import {
+  FileSpreadsheet,
+  FileText,
+  ArrowLeft,
+  ShieldAlert,
+  GitBranch,
+  Paperclip,
+  ScrollText,
+} from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
   decideStage,
@@ -61,8 +69,9 @@ export default async function SystemDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
-      <Link href="/systems" className="text-sm text-zinc-500 hover:underline">
-        ← All systems
+      <Link href="/systems/inventory" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:underline">
+        <ArrowLeft size={14} />
+        All systems
       </Link>
 
       {system.archivedAt && (
@@ -198,7 +207,10 @@ export default async function SystemDetailPage({
       </details>
       )}
 
-      <h2 className="mt-10 text-lg font-medium">Risk classification</h2>
+      <h2 className="mt-10 flex items-center gap-2 text-lg font-medium">
+        <ShieldAlert size={18} />
+        Risk classification
+      </h2>
       {system.riskClassification ? (
         <div className="mt-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
           <div className="flex flex-wrap items-center gap-3">
@@ -245,7 +257,10 @@ export default async function SystemDetailPage({
         </div>
       )}
 
-      <h2 className="mt-10 text-lg font-medium">Workflow</h2>
+      <h2 className="mt-10 flex items-center gap-2 text-lg font-medium">
+        <GitBranch size={18} />
+        Workflow
+      </h2>
       <ol className="mt-4 flex flex-col gap-4">
         {system.stages.map((stage) => (
           <li
@@ -290,7 +305,10 @@ export default async function SystemDetailPage({
         ))}
       </ol>
 
-      <h2 className="mt-10 text-lg font-medium">Evidence</h2>
+      <h2 className="mt-10 flex items-center gap-2 text-lg font-medium">
+        <Paperclip size={18} />
+        Evidence
+      </h2>
       {!isArchived && (
         <form
           action={attachEvidence.bind(null, system.id)}
@@ -342,7 +360,10 @@ export default async function SystemDetailPage({
       </ul>
 
       <div className="mt-10 flex items-center justify-between">
-        <h2 className="text-lg font-medium">Audit log</h2>
+        <h2 className="flex items-center gap-2 text-lg font-medium">
+          <ScrollText size={18} />
+          Audit log
+        </h2>
         <div className="flex gap-3 text-sm">
           <a
             href={`/systems/${system.id}/audit?format=csv`}

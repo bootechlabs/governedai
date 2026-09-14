@@ -12,7 +12,7 @@ export default function Home() {
       </p>
       <div className="flex gap-3">
         <Link
-          href="/systems"
+          href="/systems/inventory"
           className="rounded bg-black px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
         >
           View AI system inventory

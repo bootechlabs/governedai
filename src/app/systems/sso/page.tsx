@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, KeyRound } from "lucide-react";
 import { getCurrentUser } from "@/lib/current-user";
 import { canManageSso } from "@/lib/permissions";
 import { stytchClient } from "@/lib/stytch";
@@ -39,11 +40,15 @@ export default async function SsoPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
-      <Link href="/systems" className="text-sm text-zinc-500 hover:underline">
-        ← All systems
+      <Link href="/systems/inventory" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:underline">
+        <ArrowLeft size={14} />
+        All systems
       </Link>
 
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight">Single sign-on</h1>
+      <h1 className="mt-2 flex items-center gap-2 text-2xl font-semibold tracking-tight">
+        <KeyRound size={22} />
+        Single sign-on
+      </h1>
       <p className="mt-1 text-sm text-zinc-500">
         Configure a SAML or OIDC connection so your team can sign in with your identity
         provider instead of a magic link. A connection stays &quot;pending&quot; and can&apos;t be

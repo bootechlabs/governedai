@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, Building2 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import { canManageVendors } from "@/lib/permissions";
@@ -31,11 +32,15 @@ export default async function VendorsPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-12">
-      <Link href="/systems" className="text-sm text-zinc-500 hover:underline">
-        ← All systems
+      <Link href="/systems/inventory" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:underline">
+        <ArrowLeft size={14} />
+        All systems
       </Link>
 
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight">Vendors</h1>
+      <h1 className="mt-2 flex items-center gap-2 text-2xl font-semibold tracking-tight">
+        <Building2 size={22} />
+        Vendors
+      </h1>
       <p className="mt-1 text-sm text-zinc-500">
         A registered vendor auto-links to any AI system whose vendor name matches exactly —
         no need to change how systems are created or imported.

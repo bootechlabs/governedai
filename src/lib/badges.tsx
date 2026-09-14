@@ -48,7 +48,7 @@ function Badge({
   );
 }
 
-const classificationConfig: Record<
+export const classificationConfig: Record<
   DataClassification,
   { icon: LucideIcon; label: string; colorClass: string }
 > = {
@@ -63,7 +63,7 @@ export function ClassificationBadge({ value }: { value: DataClassification }) {
   return <Badge icon={config.icon} label={config.label} colorClass={config.colorClass} />;
 }
 
-const deploymentStatusConfig: Record<
+export const deploymentStatusConfig: Record<
   DeploymentStatus,
   { icon: LucideIcon; label: string; colorClass: string }
 > = {
@@ -78,7 +78,7 @@ export function DeploymentStatusBadge({ value }: { value: DeploymentStatus }) {
   return <Badge icon={config.icon} label={config.label} colorClass={config.colorClass} />;
 }
 
-const stageStatusConfig: Record<
+export const stageStatusConfig: Record<
   StageStatus,
   { icon: LucideIcon; label: string; colorClass: string }
 > = {
@@ -98,7 +98,7 @@ export function StageStatusBadge({ value }: { value: StageStatus }) {
   return <Badge icon={config.icon} label={config.label} colorClass={config.colorClass} />;
 }
 
-const riskTierConfig: Record<RiskTier, { icon: LucideIcon; label: string; colorClass: string }> = {
+export const riskTierConfig: Record<RiskTier, { icon: LucideIcon; label: string; colorClass: string }> = {
   LOW: { icon: Gauge, label: "Low risk", colorClass: "text-zinc-500" },
   MODERATE: { icon: Gauge, label: "Moderate risk", colorClass: "text-amber-600 dark:text-amber-400" },
   HIGH: { icon: AlertTriangle, label: "High risk", colorClass: "text-orange-600 dark:text-orange-400" },
@@ -110,7 +110,7 @@ export function RiskTierBadge({ value }: { value: RiskTier }) {
   return <Badge icon={config.icon} label={config.label} colorClass={config.colorClass} />;
 }
 
-const baaStatusConfig: Record<BaaStatus, { icon: LucideIcon; label: string; colorClass: string }> = {
+export const baaStatusConfig: Record<BaaStatus, { icon: LucideIcon; label: string; colorClass: string }> = {
   NOT_APPLICABLE: { icon: FileX2, label: "BAA not applicable", colorClass: "text-zinc-500" },
   REQUIRED_NOT_ON_FILE: {
     icon: FileWarning,

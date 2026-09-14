@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import { canManageUsers } from "@/lib/permissions";
@@ -29,11 +30,15 @@ export default async function UsersPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-12">
-      <Link href="/systems" className="text-sm text-zinc-500 hover:underline">
-        ← All systems
+      <Link href="/systems/inventory" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:underline">
+        <ArrowLeft size={14} />
+        All systems
       </Link>
 
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight">Manage users</h1>
+      <h1 className="mt-2 flex items-center gap-2 text-2xl font-semibold tracking-tight">
+        <Users size={22} />
+        Manage users
+      </h1>
       <p className="mt-1 text-sm text-zinc-500">
         Sign-in is admin-provisioned — add an email here before that person can sign in.
       </p>
