@@ -48,6 +48,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Unit tests import src/lib/prisma.ts, which needs the generated
+      # client on disk — not just its types, the actual PrismaClient
+      # value import. The build step regenerates it again for the migrate
+      # + next build sequence, so this only needs to run once up front.
+      - name: Generate Prisma Client
+        run: pnpm exec prisma generate
+
       - name: Lint
         run: pnpm run lint
 
