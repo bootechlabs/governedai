@@ -10,10 +10,12 @@ Live at app.governedai.co (Vercel), real design-partner org (Bootech) provisione
 - **Multi-tenancy**: real, not deferred. `Organization` owns `User`/`AiSystem`; every query/mutation is org-scoped server-side. Pulled forward from "later" because Stytch made it close to free once magic-link auth was in place.
 - **Admin-provisioned users with RBAC**: ADMIN / REVIEWER / CONTRIBUTOR roles, enforced both in UI and server actions. Live-tested end-to-end for all three roles.
 - **Inventory, workflow, evidence, audit export**: all three original pillars built and live-verified (create system → stage decisions → evidence upload to R2 → CSV/PDF audit export).
+- **Per-org SSO (SAML/OIDC)**: admins configure a connection per org at `/systems/sso` (create pending → fill in IdP values → active); sign-in page has a "Continue with SSO" path alongside magic link. Not yet tested against a real IdP (Okta/Entra/etc.) — only the create/configure UI is live-verified so far.
+- **Bulk import**: `/systems/import` accepts CSV or Excel, live-verified. Per-row validation — bad rows are skipped and reported, not a whole-file failure.
+- **Public API**: `/api/v1/ai-systems` (list/get/create), authenticated via per-org, admin-generated API keys (`/systems/api-keys`). Scoped to create+read for this pass — no update/delete endpoints yet.
 
 Not yet built (still open):
-- Per-org SSO connections (SAML/OIDC) — `ssoStartUrl` helper exists in `src/lib/stytch.ts` and the callback route already handles an `sso` token type, but no UI to create/configure a connection per org, and no "Sign in with SSO" button. Only magic-link auth is live.
-- CSV/Excel bulk import, public API.
+- Update/delete via the public API.
 - Auto-discovery (still explicitly deferred, see below).
 - Stytch project is still **Test environment** in production (a deliberate near-term tradeoff, not an oversight — see stack section).
 
@@ -53,7 +55,6 @@ One design partner org (health system, digital health vendor, or payer/RCM — p
 - Self-serve signup, billing, plan tiers — multi-tenant *data isolation* shipped (see Status), but org creation is still admin/seed-provisioned, not self-serve.
 - Configurable/custom workflow builder — stages are fixed for MVP, configurable later.
 - Email/Slack/notification integrations.
-- Per-org SSO connections (SAML/OIDC) — the identity provider (Stytch B2B) supports it and the callback path is already wired, but no UI exists to set up a connection per org yet. Magic-link auth, now multi-org-aware, covers MVP.
 - Mobile app — responsive web only.
 
 ## Core data model (as built)
@@ -64,6 +65,7 @@ One design partner org (health system, digital health vendor, or payer/RCM — p
 - **WorkflowStage** — id, ai_system_id, sequence, stage_name, status (pending/in_review/approved/conditionally_approved/rejected), owner_user_id, decision_rationale, decided_at
 - **EvidenceItem** — id, ai_system_id, type (file/link), file_url or link_url, label, uploaded_by, uploaded_at
 - **AuditLogEntry** — id, ai_system_id, actor_id, action, detail (JSON), occurred_at
+- **ApiKey** — id, organization_id, name, key_prefix (display-only), key_hash (sha256, never the plaintext), created_by_id, created_at, last_used_at, revoked_at (nullable)
 
 ## Key user flows
 
@@ -93,4 +95,4 @@ One design partner org (health system, digital health vendor, or payer/RCM — p
 - Which design partner, and which ICP (vendor vs. health system vs. payer/RCM) — still unresolved per the execution plan; may shape which fields/workflow stages matter most.
 - Exact workflow stage names/criteria — placeholder (Intake → Risk Review → Approved/Conditional/Rejected) until a design partner's real process is known; keep stage *content* easy to relabel even though the shape is fixed.
 - When to move Stytch from Test to Live environment — before the first real (non-Bootech) design partner org is provisioned, at the latest.
-- Whether/when per-org SSO (SAML/OIDC) setup becomes a real ask — infra is there, UI isn't.
+- Per-org SSO hasn't been tested against a real IdP yet — worth doing before pitching it as a real capability to a design partner.
