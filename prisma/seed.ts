@@ -51,6 +51,7 @@ const LEGACY_REGULATIONS = [
     citation: null,
     summary: null,
     sourceUrl: null,
+    effectiveDate: null,
     triggerConfig: { kind: "TIER_AT_LEAST", tier: "MODERATE" },
     artifacts: [],
   },
@@ -60,6 +61,7 @@ const LEGACY_REGULATIONS = [
     citation: null,
     summary: null,
     sourceUrl: null,
+    effectiveDate: null,
     triggerConfig: { kind: "QUESTION_WEIGHT_AT_LEAST", questionKey: "euExposure", weight: 2 },
     artifacts: [],
   },
@@ -69,6 +71,7 @@ const LEGACY_REGULATIONS = [
     citation: null,
     summary: null,
     sourceUrl: null,
+    effectiveDate: null,
     triggerConfig: { kind: "TIER_AT_LEAST", tier: "HIGH" },
     artifacts: [],
   },
@@ -79,6 +82,7 @@ const LEGACY_REGULATIONS = [
     summary:
       "Applies to automated tools used to substantially assist or replace employment decisions for NYC-based roles. Requires an independent bias audit, publication of a summary, and advance notice to candidates/employees.",
     sourceUrl: null,
+    effectiveDate: null,
     triggerConfig: { kind: "QUESTION_WEIGHT_AT_LEAST", questionKey: "employmentDecision", weight: 2 },
     artifacts: [
       {
@@ -106,6 +110,7 @@ const LEGACY_REGULATIONS = [
     summary:
       "Applies to algorithms/predictive models that could result in unfair discrimination in consequential decisions. Expect an impact assessment and consumer notice to be current.",
     sourceUrl: null,
+    effectiveDate: null,
     triggerConfig: { kind: "QUESTION_WEIGHT_AT_LEAST", questionKey: "consequentialDecision", weight: 2 },
     artifacts: [
       {
@@ -122,8 +127,110 @@ const LEGACY_REGULATIONS = [
   },
 ];
 
+// Seven states passed AI-specific health-insurance laws in 2026 converging
+// on one pattern: a licensed human must review and approve an
+// AI-influenced coverage denial/downcode/delay before it's finalized. See
+// docs/mvp-scope.md's "Differentiation roadmap" (slice 7) for the full
+// citation list. Trigger is unconditional on state+template match —
+// applicability is objective (where you operate, what you built), not
+// gated by the self-reported human-review answer; the compliance
+// checklist below is where that answer gets checked against evidence.
+const STATE_SOURCE_URL = "https://www.beckerspayer.com/policy-updates/7-ai-health-insurance-state-laws-passed-in-2026/";
+const PAYER_UM_TEMPLATES = ["PRIOR_AUTH_UM", "RCM_BILLING"] as const;
+
+function humanReviewArtifact(lawLabel: string) {
+  return [
+    {
+      label: "Human review policy on file",
+      description: `Evidence that a licensed human professional reviews and approves every AI-influenced adverse determination before it's finalized, per ${lawLabel}.`,
+      evidenceCategory: "POLICY_DOCUMENT" as const,
+    },
+  ];
+}
+
+const STATE_HEALTH_AI_LAWS = [
+  {
+    code: "AL_SB63",
+    label: "Alabama SB 63",
+    citation: "Alabama SB 63 (2026)",
+    summary:
+      "Requires a licensed human to review and approve any AI-influenced adverse coverage determination (denial, downcode, delay) before it is finalized.",
+    sourceUrl: STATE_SOURCE_URL,
+    effectiveDate: new Date("2026-10-01"),
+    triggerConfig: { kind: "STATE_DEPLOYMENT", state: "AL", templates: [...PAYER_UM_TEMPLATES] },
+    artifacts: humanReviewArtifact("Alabama SB 63"),
+  },
+  {
+    code: "CO_HB1139",
+    label: "Colorado HB 1139",
+    citation: "Colorado HB 1139 (2026)",
+    summary:
+      "Requires a licensed human to review and approve any AI-influenced adverse coverage determination before it is finalized; also bars AI-delivered psychotherapy coverage and requires periodic accuracy audits.",
+    sourceUrl: STATE_SOURCE_URL,
+    effectiveDate: new Date("2027-01-01"),
+    triggerConfig: { kind: "STATE_DEPLOYMENT", state: "CO", templates: [...PAYER_UM_TEMPLATES] },
+    artifacts: humanReviewArtifact("Colorado HB 1139"),
+  },
+  {
+    code: "GA_SB444",
+    label: "Georgia SB 444",
+    citation: "Georgia SB 444 (2026)",
+    summary:
+      "Requires a licensed human to review and approve any AI-influenced adverse coverage determination before it is finalized.",
+    sourceUrl: STATE_SOURCE_URL,
+    effectiveDate: new Date("2027-01-01"),
+    triggerConfig: { kind: "STATE_DEPLOYMENT", state: "GA", templates: [...PAYER_UM_TEMPLATES] },
+    artifacts: humanReviewArtifact("Georgia SB 444"),
+  },
+  {
+    code: "IL_SB3114",
+    label: "Illinois SB 3114",
+    citation: "Illinois SB 3114 (2026)",
+    summary: "Bans automated claim downcoding without human review.",
+    sourceUrl: STATE_SOURCE_URL,
+    effectiveDate: new Date("2028-01-01"),
+    triggerConfig: { kind: "STATE_DEPLOYMENT", state: "IL", templates: [...PAYER_UM_TEMPLATES] },
+    artifacts: humanReviewArtifact("Illinois SB 3114"),
+  },
+  {
+    code: "IA_HF2635",
+    label: "Iowa HF 2635",
+    citation: "Iowa HF 2635 (2026)",
+    summary:
+      "Requires a licensed human to review and approve any AI-influenced adverse coverage determination before it is finalized.",
+    sourceUrl: STATE_SOURCE_URL,
+    effectiveDate: null,
+    triggerConfig: { kind: "STATE_DEPLOYMENT", state: "IA", templates: [...PAYER_UM_TEMPLATES] },
+    artifacts: humanReviewArtifact("Iowa HF 2635"),
+  },
+  {
+    code: "UT_SB319",
+    label: "Utah SB 319",
+    citation: "Utah SB 319 (2026)",
+    summary:
+      "Requires a licensed human to review and approve any AI-influenced adverse coverage determination before it is finalized; also requires public disclosure of prior-authorization data and AI usage.",
+    sourceUrl: STATE_SOURCE_URL,
+    effectiveDate: new Date("2027-01-01"),
+    triggerConfig: { kind: "STATE_DEPLOYMENT", state: "UT", templates: [...PAYER_UM_TEMPLATES] },
+    artifacts: humanReviewArtifact("Utah SB 319"),
+  },
+  {
+    code: "WA_SB5395",
+    label: "Washington SB 5395",
+    citation: "Washington SB 5395 (2026)",
+    summary:
+      "Requires a licensed human to review and approve any AI-influenced adverse coverage determination before it is finalized.",
+    sourceUrl: STATE_SOURCE_URL,
+    effectiveDate: new Date("2026-06-11"),
+    triggerConfig: { kind: "STATE_DEPLOYMENT", state: "WA", templates: [...PAYER_UM_TEMPLATES] },
+    artifacts: humanReviewArtifact("Washington SB 5395"),
+  },
+];
+
+const ALL_REGULATIONS = [...LEGACY_REGULATIONS, ...STATE_HEALTH_AI_LAWS];
+
 async function seedRegulations() {
-  for (const [index, reg] of LEGACY_REGULATIONS.entries()) {
+  for (const [index, reg] of ALL_REGULATIONS.entries()) {
     const definition = await prisma.regulationDefinition.upsert({
       where: { code: reg.code },
       update: {
@@ -131,6 +238,7 @@ async function seedRegulations() {
         citation: reg.citation,
         summary: reg.summary,
         sourceUrl: reg.sourceUrl,
+        effectiveDate: reg.effectiveDate,
         triggerConfig: reg.triggerConfig,
         sortOrder: index,
       },
@@ -140,6 +248,7 @@ async function seedRegulations() {
         citation: reg.citation,
         summary: reg.summary,
         sourceUrl: reg.sourceUrl,
+        effectiveDate: reg.effectiveDate,
         triggerConfig: reg.triggerConfig,
         sortOrder: index,
       },
@@ -158,7 +267,7 @@ async function seedRegulations() {
       });
     }
   }
-  console.log(`Seeded ${LEGACY_REGULATIONS.length} regulation definitions`);
+  console.log(`Seeded ${ALL_REGULATIONS.length} regulation definitions`);
 }
 
 async function main() {

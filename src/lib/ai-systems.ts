@@ -15,6 +15,7 @@ export function serializeAiSystem(system: AiSystem) {
     vendorName: system.vendorName,
     classification: system.classification,
     deploymentStatus: system.deploymentStatus,
+    statesDeployed: system.statesDeployed,
     createdAt: system.createdAt.toISOString(),
     updatedAt: system.updatedAt.toISOString(),
     archivedAt: system.archivedAt?.toISOString() ?? null,

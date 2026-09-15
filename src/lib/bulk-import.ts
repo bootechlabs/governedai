@@ -32,5 +32,6 @@ export function validateImportRow(raw: Record<string, unknown>): AiSystemFieldIn
     vendorName: normalized.vendorname,
     classification: normalized.classification,
     deploymentStatus: normalized.deploymentstatus,
+    statesDeployed: normalized.statesdeployed,
   });
 }

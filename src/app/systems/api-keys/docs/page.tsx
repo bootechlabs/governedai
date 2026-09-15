@@ -65,15 +65,18 @@ export default async function ApiDocsPage() {
       </pre>
       <p className="mt-2 text-zinc-500">
         <code>classification</code>: PUBLIC, INTERNAL (default), CONFIDENTIAL, RESTRICTED.{" "}
-        <code>deploymentStatus</code>: PLANNED (default), PILOT, PRODUCTION, RETIRED.
+        <code>deploymentStatus</code>: PLANNED (default), PILOT, PRODUCTION, RETIRED.{" "}
+        <code>statesDeployed</code>: an array of 2-letter US state codes (or a comma-separated
+        string), e.g. <code>[&quot;AL&quot;, &quot;GA&quot;]</code> — drives which state-specific
+        regulations show as triggered.
       </p>
 
       <h2 className="mt-6 font-medium">Update an AI system</h2>
       <p className="mt-1 text-zinc-500">
         <code>PUT /api/v1/ai-systems/:id</code> — full replace, same fields and defaults as
         registering one. A change to <code>vendorName</code>, <code>classification</code>,{" "}
-        <code>deploymentStatus</code>, or <code>businessUnit</code> is logged and can trigger
-        recertification, same as editing it in the UI.
+        <code>deploymentStatus</code>, <code>businessUnit</code>, or <code>statesDeployed</code> is
+        logged and can trigger recertification, same as editing it in the UI.
       </p>
       <pre className={codeClass}>
 {`curl -X PUT https://app.governedai.co/api/v1/ai-systems/abc123 \\

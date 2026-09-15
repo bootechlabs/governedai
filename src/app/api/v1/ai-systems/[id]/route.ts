@@ -4,7 +4,7 @@ import { authenticateApiRequest, ApiAuthError } from "@/lib/api-auth";
 import { assertSystemEditable, resolveVendorId, serializeAiSystem } from "@/lib/ai-systems";
 import { parseAiSystemFieldInput } from "@/lib/ai-system-fields";
 import { logAuditEntry } from "@/lib/audit-log";
-import { detectChanges } from "@/lib/change-events";
+import { detectChanges, serializeStatesDeployed } from "@/lib/change-events";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -79,6 +79,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           vendorName: before.vendorName,
           classification: before.classification,
           deploymentStatus: before.deploymentStatus,
+          statesDeployed: before.statesDeployed,
         },
         after: { ...fields },
         source: "api",
@@ -93,12 +94,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         classification: before.classification,
         deploymentStatus: before.deploymentStatus,
         businessUnit: before.businessUnit,
+        statesDeployed: serializeStatesDeployed(before.statesDeployed),
       },
       {
         vendorName: fields.vendorName,
         classification: fields.classification,
         deploymentStatus: fields.deploymentStatus,
         businessUnit: fields.businessUnit,
+        statesDeployed: serializeStatesDeployed(fields.statesDeployed),
       },
     );
     if (changes.length > 0) {

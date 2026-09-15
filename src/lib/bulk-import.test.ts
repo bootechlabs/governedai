@@ -45,6 +45,7 @@ describe("validateImportRow", () => {
       "Vendor Name": "Acme AI Inc",
       Classification: "CONFIDENTIAL",
       "Deployment Status": "PILOT",
+      "States Deployed": "AL",
     });
     expect(result).toEqual({
       name: "Claims Triage",
@@ -53,7 +54,18 @@ describe("validateImportRow", () => {
       vendorName: "Acme AI Inc",
       classification: "CONFIDENTIAL",
       deploymentStatus: "PILOT",
+      statesDeployed: ["AL"],
     });
+  });
+
+  it("splits a comma-separated states-deployed cell into multiple states", () => {
+    const result = validateImportRow({ Name: "X", "States Deployed": "al, ga" });
+    expect(result.statesDeployed).toEqual(["AL", "GA"]);
+  });
+
+  it("defaults states deployed to an empty array when blank", () => {
+    const result = validateImportRow({ Name: "Minimal System" });
+    expect(result.statesDeployed).toEqual([]);
   });
 
   it("tolerates header casing/spacing variations", () => {

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   getQuestionsForTemplate,
   computeRiskClassification,
+  getTrackedStates,
   CORE_QUESTIONS,
   type RegulationTriggerInput,
 } from "./risk-classification";
@@ -138,5 +139,20 @@ describe("computeRiskClassification", () => {
       [],
     );
     expect(high.riskTier).toBe("HIGH");
+  });
+});
+
+describe("getTrackedStates", () => {
+  it("returns the deduped, sorted set of states across STATE_DEPLOYMENT regulations", () => {
+    const regulations: RegulationTriggerInput[] = [
+      { id: "ga", triggerConfig: { kind: "STATE_DEPLOYMENT", state: "GA", templates: ["PRIOR_AUTH_UM"] } },
+      { id: "al", triggerConfig: { kind: "STATE_DEPLOYMENT", state: "AL", templates: ["PRIOR_AUTH_UM"] } },
+      NIST,
+    ];
+    expect(getTrackedStates(regulations)).toEqual(["AL", "GA"]);
+  });
+
+  it("ignores non-STATE_DEPLOYMENT regulations", () => {
+    expect(getTrackedStates(LEGACY_REGULATIONS)).toEqual([]);
   });
 });

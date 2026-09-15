@@ -15,7 +15,7 @@ export async function submitRiskAssessment(aiSystemId: string, formData: FormDat
   if (!canCreateSystem(actor.role)) {
     throw new Error("Your role can't run a risk assessment");
   }
-  await assertSystemEditable(aiSystemId, actor.organizationId);
+  const system = await assertSystemEditable(aiSystemId, actor.organizationId);
 
   const template = String(formData.get("template") ?? "") as UseCaseTemplate;
   const questions = getQuestionsForTemplate(template);
@@ -38,10 +38,12 @@ export async function submitRiskAssessment(aiSystemId: string, formData: FormDat
     select: { id: true, triggerConfig: true },
   });
 
-  // statesDeployed is a Stage B addition (AiSystem.statesDeployed) — no
-  // STATE_DEPLOYMENT-kind regulations exist until then, so [] is correct
-  // for now, not a stand-in for a query that should be here.
-  const { riskTier, triggeredRegulationIds } = computeRiskClassification(template, answers, [], regulations);
+  const { riskTier, triggeredRegulationIds } = computeRiskClassification(
+    template,
+    answers,
+    system.statesDeployed,
+    regulations,
+  );
 
   await prisma.$transaction(async (tx) => {
     const riskClassification = await tx.riskClassification.upsert({

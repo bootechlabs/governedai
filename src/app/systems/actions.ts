@@ -9,7 +9,7 @@ import { logAuditEntry } from "@/lib/audit-log";
 import { createAiSystemRecord, assertSystemEditable, resolveVendorId } from "@/lib/ai-systems";
 import { canCreateSystem, canManageSystem, canDecideStage } from "@/lib/permissions";
 import { requiresRationale } from "@/lib/workflow";
-import { detectChanges } from "@/lib/change-events";
+import { detectChanges, serializeStatesDeployed } from "@/lib/change-events";
 import type { DataClassification, DeploymentStatus, StageStatus, EvidenceCategory } from "@prisma/client";
 
 function parseAiSystemFields(formData: FormData) {
@@ -28,6 +28,7 @@ function parseAiSystemFields(formData: FormData) {
     deploymentStatus: String(
       formData.get("deploymentStatus") ?? "PLANNED",
     ) as DeploymentStatus,
+    statesDeployed: formData.getAll("statesDeployed").map((v) => String(v)),
   };
 }
 
@@ -72,6 +73,7 @@ export async function updateAiSystem(aiSystemId: string, formData: FormData) {
         vendorName: before.vendorName,
         classification: before.classification,
         deploymentStatus: before.deploymentStatus,
+        statesDeployed: before.statesDeployed,
       },
       after: fields,
     },
@@ -83,12 +85,14 @@ export async function updateAiSystem(aiSystemId: string, formData: FormData) {
       classification: before.classification,
       deploymentStatus: before.deploymentStatus,
       businessUnit: before.businessUnit,
+      statesDeployed: serializeStatesDeployed(before.statesDeployed),
     },
     {
       vendorName: fields.vendorName,
       classification: fields.classification,
       deploymentStatus: fields.deploymentStatus,
       businessUnit: fields.businessUnit,
+      statesDeployed: serializeStatesDeployed(fields.statesDeployed),
     },
   );
   if (changes.length > 0) {

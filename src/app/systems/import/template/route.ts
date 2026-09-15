@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 
 const TEMPLATE_CSV =
   [
-    "Name,Description,Business Unit,Vendor Name,Classification,Deployment Status",
-    "Claims Triage Assistant,Ambient scribe for claims review,Claims Ops,Acme AI Inc,CONFIDENTIAL,PILOT",
+    "Name,Description,Business Unit,Vendor Name,Classification,Deployment Status,States Deployed",
+    "Claims Triage Assistant,Ambient scribe for claims review,Claims Ops,Acme AI Inc,CONFIDENTIAL,PILOT,AL",
   ].join("\n") + "\n";
 
 export function GET() {

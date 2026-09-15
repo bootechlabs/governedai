@@ -248,6 +248,22 @@ export async function buildGovernanceReportPdf(input: GovernanceReportInput) {
         .text("This is an advisory self-assessment, not a legal determination — verify applicability with counsel.");
     }
 
+    // Self-reported on the intake questionnaire (prior-auth/UM and
+    // RCM/billing templates only) — the exact fact several 2026 state
+    // payer/UM laws' human-review requirement turns on. Shown once here
+    // rather than duplicated per state-law section below: it's one
+    // answer, not a per-regulation evidence check.
+    const humanReviewAnswer = (riskClassification.answers as Record<string, unknown> | null)?.[
+      "humanReviewBeforeFinalization"
+    ];
+    if (typeof humanReviewAnswer === "number") {
+      doc
+        .moveDown(0.25)
+        .fontSize(10)
+        .fillColor("#000")
+        .text(`Human review before finalization: ${humanReviewAnswer === 0 ? "Yes" : "No"}`);
+    }
+
     // --- Law-specific sections (only ones with a checkable artifact —
     // broad frameworks like NIST AI RMF/ISO 42001 have none) ---
     const sections = computeRegulationSectionStatuses(triggeredRegulations, evidence).filter(

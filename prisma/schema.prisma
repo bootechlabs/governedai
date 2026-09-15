@@ -196,6 +196,11 @@ model AiSystem {
   vendor           Vendor?            @relation(fields: [vendorId], references: [id])
   vendorId         String?
   deploymentStatus DeploymentStatus   @default(PLANNED)
+  // 2-letter US state codes where this system is actually deployed/used —
+  // drives STATE_DEPLOYMENT regulation triggers (see RegulationDefinition).
+  // Edit-form-only, same as description (not in the compact inventory
+  // quick-add row).
+  statesDeployed   String[]
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   archivedAt       DateTime?

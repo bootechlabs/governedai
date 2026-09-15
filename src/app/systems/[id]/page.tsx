@@ -28,7 +28,7 @@ import {
   evidenceCategoryLabels,
 } from "@/lib/badges";
 import { isStageActionable, needsRecertification } from "@/lib/workflow";
-import { USE_CASE_TEMPLATE_LABELS } from "@/lib/risk-classification";
+import { USE_CASE_TEMPLATE_LABELS, getTrackedStates } from "@/lib/risk-classification";
 import { computeRegulationSectionStatuses } from "@/lib/regulation-sections";
 import { inputClass, primaryButtonClass, subtleLinkClass } from "@/lib/ui";
 import { DeleteSystemButton } from "./delete-button";
@@ -82,6 +82,12 @@ export default async function SystemDetailPage({
     where: { organizationId: actor.organizationId },
     select: { name: true },
   });
+
+  const activeRegulations = await prisma.regulationDefinition.findMany({
+    where: { active: true },
+    select: { id: true, triggerConfig: true },
+  });
+  const trackedStates = getTrackedStates(activeRegulations);
 
   const triggeredRegulations =
     system.riskClassification?.triggeredRegulationRows.map((row) => ({
@@ -308,6 +314,31 @@ export default async function SystemDetailPage({
                   </div>
                 </div>
               </div>
+
+              {trackedStates.length > 0 && (
+                <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                  <span className="text-xs uppercase tracking-wide text-zinc-500">Regulatory</span>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-zinc-500">
+                      States this system is deployed/used in — only states with a tracked AI law are
+                      listed here.
+                    </span>
+                    <div className="flex flex-wrap gap-3">
+                      {trackedStates.map((state) => (
+                        <label key={state} className="flex items-center gap-1.5 text-sm">
+                          <input
+                            type="checkbox"
+                            name="statesDeployed"
+                            value={state}
+                            defaultChecked={system.statesDeployed.includes(state)}
+                          />
+                          {state}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <button type="submit" className={`self-start ${primaryButtonClass}`}>
                 Save changes

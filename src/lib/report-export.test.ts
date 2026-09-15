@@ -46,6 +46,7 @@ function fakeAiSystem(overrides: Partial<AiSystem> = {}): AiSystem {
     classification: "INTERNAL",
     vendorId: null,
     deploymentStatus: "PILOT",
+    statesDeployed: [],
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     archivedAt: null,

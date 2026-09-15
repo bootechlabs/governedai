@@ -78,6 +78,24 @@ export const CORE_QUESTIONS: RiskQuestion[] = [
   },
 ];
 
+// Shared by PRIOR_AUTH_UM and RCM_BILLING — the 2026 state payer/UM laws
+// (Alabama SB 63, Colorado HB 1139, and others; see the STATE_DEPLOYMENT
+// RegulationDefinition rows seeded for these) converge on requiring a
+// licensed human to review and approve every AI-influenced adverse
+// determination before it's finalized. This answer feeds the risk score
+// like any other question — it isn't itself what triggers a state law
+// (that's states-deployed × template, an objective applicability question,
+// not a self-report) — but it's exactly what the compliance checklist for
+// each triggered state law is checking for.
+const HUMAN_REVIEW_BEFORE_FINALIZATION_QUESTION: RiskQuestion = {
+  key: "humanReviewBeforeFinalization",
+  text: "Does a licensed human professional review and approve every AI-influenced adverse determination (denial, downcode, delay) before it is finalized?",
+  options: [
+    { label: "Yes, every determination", weight: 0 },
+    { label: "No, or only some determinations", weight: 3 },
+  ],
+};
+
 const TEMPLATE_QUESTIONS: Record<UseCaseTemplate, RiskQuestion[]> = {
   AMBIENT_SCRIBE: [
     {
@@ -144,6 +162,7 @@ const TEMPLATE_QUESTIONS: Record<UseCaseTemplate, RiskQuestion[]> = {
         { label: "The notice is generated and sent automatically, straight from the system's determination", weight: 3 },
       ],
     },
+    HUMAN_REVIEW_BEFORE_FINALIZATION_QUESTION,
   ],
   RCM_BILLING: [
     {
@@ -166,6 +185,7 @@ const TEMPLATE_QUESTIONS: Record<UseCaseTemplate, RiskQuestion[]> = {
         { label: "Yes, fully automated with no required approval", weight: 3 },
       ],
     },
+    HUMAN_REVIEW_BEFORE_FINALIZATION_QUESTION,
   ],
   PATIENT_CHATBOT: [
     {
@@ -251,6 +271,22 @@ function isRegulationTriggered(
     case "STATE_DEPLOYMENT":
       return rule.templates.includes(context.template) && context.statesDeployed.includes(rule.state);
   }
+}
+
+// The set of states a STATE_DEPLOYMENT regulation actually tracks —
+// drives the edit form's "which states does this deploy in" checkbox
+// list, so the UI only ever offers states with a real seeded law instead
+// of a full 50-state picker. Adding an 8th state law (a seed insert) is
+// enough for it to show up here with no UI code change.
+export function getTrackedStates(regulations: RegulationTriggerInput[]): string[] {
+  const states = new Set<string>();
+  for (const reg of regulations) {
+    const rule = reg.triggerConfig as RegulationTriggerRule;
+    if (rule.kind === "STATE_DEPLOYMENT") {
+      states.add(rule.state);
+    }
+  }
+  return [...states].sort();
 }
 
 export function computeRiskClassification(

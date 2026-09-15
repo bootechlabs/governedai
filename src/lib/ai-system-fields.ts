@@ -21,6 +21,18 @@ export interface AiSystemFieldInput {
   vendorName: string | null;
   classification: DataClassification;
   deploymentStatus: DeploymentStatus;
+  statesDeployed: string[];
+}
+
+// Accepts either a real array (public API JSON body) or a comma-separated
+// string (a bulk-import spreadsheet cell) — same untrusted-string-input
+// idea as normalizeEnum above, but states aren't a closed enum here (a
+// state with no tracked law yet is still a valid code), so this just
+// normalizes casing/whitespace rather than validating against a fixed list.
+function parseStatesDeployed(raw: unknown): string[] {
+  if (raw === undefined || raw === null || raw === "") return [];
+  const values = Array.isArray(raw) ? raw : String(raw).split(",");
+  return values.map((v) => String(v).trim().toUpperCase()).filter((v) => v.length > 0);
 }
 
 // Shared by bulk import (spreadsheet rows) and the public API (JSON
@@ -61,5 +73,6 @@ export function parseAiSystemFieldInput(raw: Record<string, unknown>): AiSystemF
       "PLANNED",
       "Deployment status",
     ),
+    statesDeployed: parseStatesDeployed(raw.statesDeployed),
   };
 }
