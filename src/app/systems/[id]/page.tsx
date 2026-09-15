@@ -37,12 +37,25 @@ import { canManageSystem, canDecideStage, canCreateSystem } from "@/lib/permissi
 
 export const dynamic = "force-dynamic";
 
+type TabKey = "risk" | "workflow" | "evidence" | "audit";
+const TAB_KEYS: TabKey[] = ["risk", "workflow", "evidence", "audit"];
+const TAB_CONFIG: Record<TabKey, { label: string; icon: typeof ShieldAlert }> = {
+  risk: { label: "Risk classification", icon: ShieldAlert },
+  workflow: { label: "Workflow", icon: GitBranch },
+  evidence: { label: "Evidence", icon: Paperclip },
+  audit: { label: "Audit log", icon: ScrollText },
+};
+
 export default async function SystemDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
+  const { tab: tabParam } = await searchParams;
+  const tab: TabKey = TAB_KEYS.includes(tabParam as TabKey) ? (tabParam as TabKey) : "risk";
   const actor = await getCurrentUser();
 
   const system = await prisma.aiSystem.findUnique({
@@ -74,18 +87,20 @@ export default async function SystemDetailPage({
     system.stages,
   );
 
-  // Everything a reviewer would otherwise have to read all five sections
-  // to find — built from data already fetched above, no extra queries.
-  const actionItems: string[] = [];
+  // Everything a reviewer would otherwise have to read all four tabs to
+  // find — built from data already fetched above, no extra queries. Each
+  // item links straight to the tab that resolves it.
+  const actionItems: { label: string; tab: TabKey }[] = [];
   if (!isArchived) {
     if (!system.riskClassification) {
-      actionItems.push("No risk assessment has been run yet");
+      actionItems.push({ label: "No risk assessment has been run yet", tab: "risk" });
     }
     const pendingStageCount = system.stages.filter((s) => isStageActionable(s.status)).length;
     if (pendingStageCount > 0) {
-      actionItems.push(
-        `${pendingStageCount} workflow stage${pendingStageCount === 1 ? "" : "s"} awaiting a decision`,
-      );
+      actionItems.push({
+        label: `${pendingStageCount} workflow stage${pendingStageCount === 1 ? "" : "s"} awaiting a decision`,
+        tab: "workflow",
+      });
     }
     if (system.riskClassification) {
       const missingArtifacts = computeRegulationSectionStatuses(
@@ -93,13 +108,14 @@ export default async function SystemDetailPage({
         system.evidence,
       ).flatMap((section) => section.artifacts.filter((a) => !a.onFile));
       if (missingArtifacts.length > 0) {
-        actionItems.push(
-          `${missingArtifacts.length} compliance item${missingArtifacts.length === 1 ? "" : "s"} missing evidence`,
-        );
+        actionItems.push({
+          label: `${missingArtifacts.length} compliance item${missingArtifacts.length === 1 ? "" : "s"} missing evidence`,
+          tab: "evidence",
+        });
       }
     }
     if (needsRecert) {
-      actionItems.push("Changed since last review — recertification recommended");
+      actionItems.push({ label: "Changed since last review — recertification recommended", tab: "workflow" });
     }
   }
 
@@ -133,7 +149,11 @@ export default async function SystemDetailPage({
           </div>
           <ul className="mt-1 list-disc pl-5">
             {actionItems.map((item) => (
-              <li key={item}>{item}</li>
+              <li key={item.label}>
+                <Link href={`/systems/${system.id}?tab=${item.tab}`} className="underline hover:no-underline">
+                  {item.label}
+                </Link>
+              </li>
             ))}
           </ul>
         </div>
@@ -304,10 +324,32 @@ export default async function SystemDetailPage({
       </details>
       )}
 
-      <h2 className="mt-10 flex items-center gap-2 text-lg font-medium">
-        <ShieldAlert size={18} />
-        Risk classification
-      </h2>
+      <div role="tablist" className="mt-8 flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
+        {TAB_KEYS.map((key) => {
+          const config = TAB_CONFIG[key];
+          const Icon = config.icon;
+          const active = tab === key;
+          return (
+            <Link
+              key={key}
+              href={`/systems/${system.id}?tab=${key}`}
+              role="tab"
+              aria-selected={active}
+              className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium ${
+                active
+                  ? "border-zinc-900 text-zinc-900 dark:border-zinc-100 dark:text-zinc-100"
+                  : "border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+              }`}
+            >
+              <Icon size={16} />
+              {config.label}
+            </Link>
+          );
+        })}
+      </div>
+
+      {tab === "risk" && (
+      <div role="tabpanel">
       {system.riskClassification ? (
         <div className="mt-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
           <div className="flex flex-wrap items-center gap-3">
@@ -353,11 +395,11 @@ export default async function SystemDetailPage({
           )}
         </div>
       )}
+      </div>
+      )}
 
-      <h2 className="mt-10 flex items-center gap-2 text-lg font-medium">
-        <GitBranch size={18} />
-        Workflow
-      </h2>
+      {tab === "workflow" && (
+      <div role="tabpanel">
       <ol className="mt-4 flex flex-col gap-4">
         {system.stages.map((stage) => (
           <li
@@ -426,11 +468,11 @@ export default async function SystemDetailPage({
           </li>
         ))}
       </ol>
+      </div>
+      )}
 
-      <h2 className="mt-10 flex items-center gap-2 text-lg font-medium">
-        <Paperclip size={18} />
-        Evidence
-      </h2>
+      {tab === "evidence" && (
+      <div role="tabpanel">
       {!isArchived && (
         <form
           action={attachEvidence.bind(null, system.id)}
@@ -480,28 +522,26 @@ export default async function SystemDetailPage({
           </li>
         ))}
       </ul>
+      </div>
+      )}
 
-      <div className="mt-10 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-lg font-medium">
-          <ScrollText size={18} />
-          Audit log
-        </h2>
-        <div className="flex gap-3 text-sm">
-          <a
-            href={`/systems/${system.id}/audit?format=csv`}
-            className={`inline-flex items-center gap-1.5 ${subtleLinkClass}`}
-          >
-            <FileSpreadsheet size={14} />
-            Raw audit log (CSV)
-          </a>
-          <a
-            href={`/systems/${system.id}/audit?format=pdf`}
-            className={`inline-flex items-center gap-1.5 ${subtleLinkClass}`}
-          >
-            <FileText size={14} />
-            Full governance report (PDF)
-          </a>
-        </div>
+      {tab === "audit" && (
+      <div role="tabpanel">
+      <div className="mt-4 flex justify-end gap-3 text-sm">
+        <a
+          href={`/systems/${system.id}/audit?format=csv`}
+          className={`inline-flex items-center gap-1.5 ${subtleLinkClass}`}
+        >
+          <FileSpreadsheet size={14} />
+          Raw audit log (CSV)
+        </a>
+        <a
+          href={`/systems/${system.id}/audit?format=pdf`}
+          className={`inline-flex items-center gap-1.5 ${subtleLinkClass}`}
+        >
+          <FileText size={14} />
+          Full governance report (PDF)
+        </a>
       </div>
       <ul className="mt-4 flex flex-col gap-2 text-sm">
         {system.auditLog.length === 0 && (
@@ -514,6 +554,8 @@ export default async function SystemDetailPage({
           </li>
         ))}
       </ul>
+      </div>
+      )}
     </div>
   );
 }
