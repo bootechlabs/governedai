@@ -19,12 +19,15 @@ Live at app.governedai.co (Vercel), real org (Bootech) provisioned.
 - **Public API**: `/api/v1/ai-systems` (list/get/create), per-org API keys at `/systems/api-keys`. No update/delete endpoints yet.
 - **Platform-admin layer** (beyond original v0.1 scope): `User.isPlatformAdmin` gates `/platform` — a global dashboard across every org/vertical, and an impersonation flow (view-as any org's user, time-boxed to 1 hour, email + audit-logged, banner + one-click stop). Built because supporting multiple real customers with zero cross-org visibility wasn't viable.
 - **Icons + legend**: nav, page headings, and section headings are icon-led; `/systems/legend` explains every one, generated from the same config objects the badges use so it can't drift.
+- **UI/UX pass 1**: consistent status-color vocabulary, an action-summary callout on system detail, distinct-weighted review/approval buttons with a server-enforced rationale requirement, dashboard hierarchy + filtered inventory links, self-service profile pictures.
+- **Change events + recertification** (slice 6): a `ChangeEvent` per governance-relevant field edit (vendor, classification, deployment status, business unit); recertification need is computed (not a stored flag) from whether a change is newer than the last stage decision, and re-opens the decision form on already-decided stages without resetting their status.
+- **Root error boundary**: every thrown Server Action error (all deliberately user-facing in this codebase) now renders as a real message instead of a blank crash screen.
 
 **Not yet built:**
-- Change Event detection + recertification trigger (slice 6 — explicitly gated on 1–5 being solid, which they now are; next up if pursued).
 - Portfolio-level report export (system-level is done).
 - Update/delete on the public API.
 - Stytch Live environment cutover (still on Test).
+- Resend domain verification (impersonation email currently no-ops).
 
 ## Reconciliation note
 
@@ -72,8 +75,7 @@ EasyAudit competes on generic compliance-framework breadth, not AI-specific gove
 - **AuditLogEntry** — id, ai_system_id, actor_id, action, detail (JSON), occurred_at.
 - **ApiKey** — id, organization_id, name, key_prefix, key_hash, created_by_id, last_used_at, revoked_at.
 - **ImpersonationSession** — id, platform_admin_id, target_user_id, started_at, expires_at, ended_at.
-
-Not yet built: **Change Event** (logged when a system's key fields change — model, vendor, use case, data sources — triggering re-review; slice 6).
+- **ChangeEvent** — id, ai_system_id, field, before_value, after_value, occurred_at, actor_id.
 
 ## Core user flow (as built)
 
@@ -107,7 +109,6 @@ Not yet built: portfolio-level export.
 - Lightweight shadow-AI self-report intake — not technical agent/SaaS discovery (Zenity/Darktrace's lane), but a department-by-department survey feeding the AiSystem entity (bulk CSV/Excel import for this already exists).
 - One real third-party integration, prioritized by whatever blocks the first few real users — likely a vendor-list/GRC-tool export before Jira or an EHR system.
 - Portfolio-level report export.
-- Change Event detection + recertification trigger (slice 6).
 
 ## Definition of done for MVP
 
@@ -121,4 +122,3 @@ Not yet built: portfolio-level export.
 - Per-org SSO hasn't been tested against a real IdP yet.
 - Resend account/domain verification not yet set up — impersonation emails currently no-op.
 - Whether risk classification should gate workflow stage requirements (e.g., a higher-risk system needing an extra review stage) — not decided yet.
-- Whether/when to pursue Change Event detection (slice 6) vs. other fast-follows.
