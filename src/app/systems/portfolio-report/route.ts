@@ -15,7 +15,9 @@ export async function GET(request: NextRequest) {
       include: {
         owner: true,
         vendor: true,
-        riskClassification: true,
+        riskClassification: {
+          include: { triggeredRegulationRows: { include: { regulation: { include: { artifacts: true } } } } },
+        },
         evidence: { select: { category: true, label: true, fileUrl: true, linkUrl: true } },
       },
     }),

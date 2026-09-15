@@ -13,10 +13,28 @@ import type {
   Vendor,
   WorkflowStage,
 } from "@prisma/client";
-import { USE_CASE_TEMPLATE_LABELS, REGULATION_LABELS } from "@/lib/risk-classification";
+import { USE_CASE_TEMPLATE_LABELS } from "@/lib/risk-classification";
 import { computeRegulationSectionStatuses } from "@/lib/regulation-sections";
 
 type AuditEntryWithActor = AuditLogEntry & { actor: User };
+
+// A RiskClassification's triggered regulations come through this join
+// shape (see prisma/schema.prisma RiskClassificationRegulation) rather
+// than the old enum array — callers' Prisma queries include exactly this.
+export interface TriggeredRegulationRow {
+  regulation: {
+    id: string;
+    code: string;
+    label: string;
+    citation: string | null;
+    summary: string | null;
+    artifacts: { id: string; label: string; description: string; evidenceCategory: EvidenceCategory }[];
+  };
+}
+
+function mapTriggeredRegulations(rows: TriggeredRegulationRow[]) {
+  return rows.map((row) => row.regulation);
+}
 
 export function slugifyFileName(name: string) {
   return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -52,7 +70,7 @@ export interface PortfolioSystemInput {
   classification: DataClassification;
   deploymentStatus: DeploymentStatus;
   owner: User;
-  riskClassification: RiskClassification | null;
+  riskClassification: (RiskClassification & { triggeredRegulationRows: TriggeredRegulationRow[] }) | null;
   evidence: {
     category: EvidenceCategory;
     label: string | null;
@@ -63,7 +81,7 @@ export interface PortfolioSystemInput {
 
 function missingComplianceCount(system: PortfolioSystemInput): number {
   return computeRegulationSectionStatuses(
-    system.riskClassification?.triggeredRegulations ?? [],
+    mapTriggeredRegulations(system.riskClassification?.triggeredRegulationRows ?? []),
     system.evidence,
   ).flatMap((section) => section.artifacts.filter((a) => !a.onFile)).length;
 }
@@ -84,8 +102,8 @@ export function buildPortfolioCsv(systems: PortfolioSystemInput[]) {
   const rows = systems.map((system) => {
     const vendorName = system.vendor?.name ?? system.vendorName ?? "";
     const riskTier = system.riskClassification?.riskTier ?? "Not assessed";
-    const regulations = (system.riskClassification?.triggeredRegulations ?? [])
-      .map((reg) => REGULATION_LABELS[reg])
+    const regulations = mapTriggeredRegulations(system.riskClassification?.triggeredRegulationRows ?? [])
+      .map((reg) => reg.label)
       .join("; ");
 
     return [
@@ -108,7 +126,9 @@ export function buildPortfolioCsv(systems: PortfolioSystemInput[]) {
 
 export interface GovernanceReportInput {
   system: AiSystem & { owner: User; vendor: Vendor | null };
-  riskClassification: (RiskClassification & { completedBy: User }) | null;
+  riskClassification:
+    | (RiskClassification & { completedBy: User; triggeredRegulationRows: TriggeredRegulationRow[] })
+    | null;
   stages: (WorkflowStage & { owner: User | null })[];
   evidence: {
     category: EvidenceCategory;
@@ -215,10 +235,11 @@ export async function buildGovernanceReportPdf(input: GovernanceReportInput) {
         `Assessed by ${riskClassification.completedBy.name ?? riskClassification.completedBy.email} on ${riskClassification.completedAt.toISOString().slice(0, 10)}`,
       );
 
-    if (riskClassification.triggeredRegulations.length > 0) {
+    const triggeredRegulations = mapTriggeredRegulations(riskClassification.triggeredRegulationRows);
+    if (triggeredRegulations.length > 0) {
       doc.moveDown(0.25).fontSize(10).fillColor("#000").text("Regulations likely triggered:");
-      riskClassification.triggeredRegulations.forEach((reg) => {
-        doc.fontSize(10).fillColor("#333").text(`• ${REGULATION_LABELS[reg]}`, { indent: 12 });
+      triggeredRegulations.forEach((reg) => {
+        doc.fontSize(10).fillColor("#333").text(`• ${reg.label}`, { indent: 12 });
       });
       doc
         .moveDown(0.25)
@@ -227,12 +248,15 @@ export async function buildGovernanceReportPdf(input: GovernanceReportInput) {
         .text("This is an advisory self-assessment, not a legal determination — verify applicability with counsel.");
     }
 
-    // --- Law-specific sections ---
-    const sections = computeRegulationSectionStatuses(riskClassification.triggeredRegulations, evidence);
+    // --- Law-specific sections (only ones with a checkable artifact —
+    // broad frameworks like NIST AI RMF/ISO 42001 have none) ---
+    const sections = computeRegulationSectionStatuses(triggeredRegulations, evidence).filter(
+      (section) => section.artifacts.length > 0,
+    );
     sections.forEach((section) => {
-      heading(doc, section.title);
-      doc.fontSize(9).fillColor("#666").text(section.citation);
-      doc.fontSize(10).fillColor("#333").text(section.summary);
+      heading(doc, section.label);
+      if (section.citation) doc.fontSize(9).fillColor("#666").text(section.citation);
+      if (section.summary) doc.fontSize(10).fillColor("#333").text(section.summary);
       doc.moveDown(0.25);
       section.artifacts.forEach((artifact) => {
         const status = artifact.onFile ? "On file" : "Not on file";
@@ -376,8 +400,8 @@ export async function buildPortfolioReportPdf(
   }
   systems.forEach((system) => {
     const vendorName = system.vendor?.name ?? system.vendorName;
-    const regulations = (system.riskClassification?.triggeredRegulations ?? [])
-      .map((reg) => REGULATION_LABELS[reg])
+    const regulations = mapTriggeredRegulations(system.riskClassification?.triggeredRegulationRows ?? [])
+      .map((reg) => reg.label)
       .join(", ");
     const missingCount = missingComplianceCount(system);
 

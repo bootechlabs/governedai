@@ -17,7 +17,12 @@ export async function GET(
     include: {
       owner: true,
       vendor: true,
-      riskClassification: { include: { completedBy: true } },
+      riskClassification: {
+        include: {
+          completedBy: true,
+          triggeredRegulationRows: { include: { regulation: { include: { artifacts: true } } } },
+        },
+      },
       stages: { orderBy: { sequence: "asc" }, include: { owner: true } },
       evidence: { orderBy: { uploadedAt: "desc" }, include: { uploadedBy: true } },
       auditLog: { orderBy: { occurredAt: "asc" }, include: { actor: true } },

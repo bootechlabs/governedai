@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { slugifyFileName, buildAuditCsv, buildGovernanceReportPdf } from "./report-export";
+import {
+  slugifyFileName,
+  buildAuditCsv,
+  buildGovernanceReportPdf,
+  type TriggeredRegulationRow,
+} from "./report-export";
 import type { AiSystem, AuditLogEntry, RiskClassification, User, Vendor } from "@prisma/client";
 
 function fakeUser(overrides: Partial<User> = {}): User {
@@ -51,8 +56,10 @@ function fakeAiSystem(overrides: Partial<AiSystem> = {}): AiSystem {
 }
 
 function fakeRiskClassification(
-  overrides: Partial<RiskClassification & { completedBy: User }> = {},
-): RiskClassification & { completedBy: User } {
+  overrides: Partial<
+    RiskClassification & { completedBy: User; triggeredRegulationRows: TriggeredRegulationRow[] }
+  > = {},
+): RiskClassification & { completedBy: User; triggeredRegulationRows: TriggeredRegulationRow[] } {
   return {
     id: "risk_1",
     useCaseTemplate: "GENERIC",
@@ -63,7 +70,31 @@ function fakeRiskClassification(
     aiSystemId: "system_1",
     completedById: "user_1",
     completedBy: fakeUser(),
+    triggeredRegulationRows: [],
     ...overrides,
+  };
+}
+
+function fakeTriggeredRegulationRow(
+  overrides: Partial<TriggeredRegulationRow["regulation"]> = {},
+): TriggeredRegulationRow {
+  return {
+    regulation: {
+      id: "reg_1",
+      code: "NYC_LL144",
+      label: "NYC Local Law 144",
+      citation: "NYC Local Law 144 of 2021",
+      summary: "Applies to automated employment decision tools.",
+      artifacts: [
+        {
+          id: "artifact_1",
+          label: "Independent bias audit on file",
+          description: "A bias audit conducted within the past year.",
+          evidenceCategory: "BIAS_AUDIT_REPORT",
+        },
+      ],
+      ...overrides,
+    },
   };
 }
 
@@ -123,7 +154,9 @@ describe("buildGovernanceReportPdf", () => {
   it("still produces a valid PDF when a triggered regulation has matching evidence on file", async () => {
     const pdf = await buildGovernanceReportPdf({
       ...baseInput,
-      riskClassification: fakeRiskClassification({ triggeredRegulations: ["NYC_LL144"] }),
+      riskClassification: fakeRiskClassification({
+        triggeredRegulationRows: [fakeTriggeredRegulationRow()],
+      }),
       evidence: [
         {
           category: "BIAS_AUDIT_REPORT",
@@ -142,7 +175,22 @@ describe("buildGovernanceReportPdf", () => {
   it("still produces a valid PDF when a triggered regulation has no matching evidence", async () => {
     const pdf = await buildGovernanceReportPdf({
       ...baseInput,
-      riskClassification: fakeRiskClassification({ triggeredRegulations: ["CO_SB21_169"] }),
+      riskClassification: fakeRiskClassification({
+        triggeredRegulationRows: [
+          fakeTriggeredRegulationRow({
+            code: "CO_SB21_169",
+            label: "Colorado SB21-169",
+            artifacts: [
+              {
+                id: "artifact_2",
+                label: "Algorithmic impact assessment on file",
+                description: "An assessment of the system's potential for unfair discriminatory outcomes.",
+                evidenceCategory: "TEST_RESULT",
+              },
+            ],
+          }),
+        ],
+      }),
     });
     expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
   });

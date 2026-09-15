@@ -1,4 +1,4 @@
-import type { UseCaseTemplate, RiskTier, Regulation } from "@prisma/client";
+import type { UseCaseTemplate, RiskTier } from "@prisma/client";
 
 export interface RiskQuestionOption {
   label: string;
@@ -201,14 +201,6 @@ export const USE_CASE_TEMPLATE_LABELS: Record<UseCaseTemplate, string> = {
   GENERIC: "Generic / other",
 };
 
-export const REGULATION_LABELS: Record<Regulation, string> = {
-  NIST_AI_RMF: "NIST AI Risk Management Framework",
-  EU_AI_ACT: "EU AI Act",
-  ISO_42001: "ISO/IEC 42001",
-  NYC_LL144: "NYC Local Law 144",
-  CO_SB21_169: "Colorado SB21-169",
-};
-
 export function getQuestionsForTemplate(template: UseCaseTemplate): RiskQuestion[] {
   return [...CORE_QUESTIONS, ...TEMPLATE_QUESTIONS[template]];
 }
@@ -224,38 +216,59 @@ function tierFromPercent(pct: number): RiskTier {
   return TIER_THRESHOLDS.find((t) => pct <= t.max)!.tier;
 }
 
-// weight >= 2 on these three core questions is what actually drives each
-// regulation's advisory trigger — see the plan doc / mvp-scope.md for the
-// reasoning. This is a heuristic, not a legal determination: the UI must
-// always frame these as "likely applies — verify with counsel."
-const REGULATION_TRIGGER_QUESTIONS: Record<string, Regulation> = {
-  employmentDecision: "NYC_LL144",
-  consequentialDecision: "CO_SB21_169",
-  euExposure: "EU_AI_ACT",
-};
+// A regulation is a RegulationDefinition row (see prisma/schema.prisma),
+// not a fixed enum — a new state law is a seed-data insert, not a code
+// change. Each row's `triggerConfig` JSON is one of these three shapes,
+// interpreted generically below. This is a heuristic, not a legal
+// determination: the UI must always frame these as "likely applies —
+// verify with counsel."
+export type RegulationTriggerRule =
+  | { kind: "TIER_AT_LEAST"; tier: RiskTier }
+  | { kind: "QUESTION_WEIGHT_AT_LEAST"; questionKey: string; weight: number }
+  | { kind: "STATE_DEPLOYMENT"; state: string; templates: UseCaseTemplate[] };
+
+export interface RegulationTriggerInput {
+  id: string;
+  triggerConfig: unknown;
+}
+
+const TIER_RANK: Record<RiskTier, number> = { LOW: 0, MODERATE: 1, HIGH: 2, CRITICAL: 3 };
+
+function isRegulationTriggered(
+  rule: RegulationTriggerRule,
+  context: {
+    riskTier: RiskTier;
+    answers: Record<string, number>;
+    template: UseCaseTemplate;
+    statesDeployed: string[];
+  },
+): boolean {
+  switch (rule.kind) {
+    case "TIER_AT_LEAST":
+      return TIER_RANK[context.riskTier] >= TIER_RANK[rule.tier];
+    case "QUESTION_WEIGHT_AT_LEAST":
+      return (context.answers[rule.questionKey] ?? 0) >= rule.weight;
+    case "STATE_DEPLOYMENT":
+      return rule.templates.includes(context.template) && context.statesDeployed.includes(rule.state);
+  }
+}
 
 export function computeRiskClassification(
   template: UseCaseTemplate,
   answers: Record<string, number>,
-): { riskTier: RiskTier; triggeredRegulations: Regulation[] } {
+  statesDeployed: string[],
+  regulations: RegulationTriggerInput[],
+): { riskTier: RiskTier; triggeredRegulationIds: string[] } {
   const questions = getQuestionsForTemplate(template);
   const maxPossible = questions.length * 3;
   const total = questions.reduce((sum, q) => sum + (answers[q.key] ?? 0), 0);
   const pct = maxPossible === 0 ? 0 : Math.round((total / maxPossible) * 100);
   const riskTier = tierFromPercent(pct);
 
-  const triggeredRegulations = new Set<Regulation>();
-  for (const [key, regulation] of Object.entries(REGULATION_TRIGGER_QUESTIONS)) {
-    if ((answers[key] ?? 0) >= 2) {
-      triggeredRegulations.add(regulation);
-    }
-  }
-  if (riskTier === "MODERATE" || riskTier === "HIGH" || riskTier === "CRITICAL") {
-    triggeredRegulations.add("NIST_AI_RMF");
-  }
-  if (riskTier === "HIGH" || riskTier === "CRITICAL") {
-    triggeredRegulations.add("ISO_42001");
-  }
+  const context = { riskTier, answers, template, statesDeployed };
+  const triggeredRegulationIds = regulations
+    .filter((reg) => isRegulationTriggered(reg.triggerConfig as RegulationTriggerRule, context))
+    .map((reg) => reg.id);
 
-  return { riskTier, triggeredRegulations: [...triggeredRegulations] };
+  return { riskTier, triggeredRegulationIds };
 }

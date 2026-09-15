@@ -28,7 +28,7 @@ import {
   evidenceCategoryLabels,
 } from "@/lib/badges";
 import { isStageActionable, needsRecertification } from "@/lib/workflow";
-import { USE_CASE_TEMPLATE_LABELS, REGULATION_LABELS } from "@/lib/risk-classification";
+import { USE_CASE_TEMPLATE_LABELS } from "@/lib/risk-classification";
 import { computeRegulationSectionStatuses } from "@/lib/regulation-sections";
 import { inputClass, primaryButtonClass, subtleLinkClass } from "@/lib/ui";
 import { DeleteSystemButton } from "./delete-button";
@@ -65,7 +65,12 @@ export default async function SystemDetailPage({
       stages: { orderBy: { sequence: "asc" }, include: { owner: true } },
       evidence: { orderBy: { uploadedAt: "desc" }, include: { uploadedBy: true } },
       auditLog: { orderBy: { occurredAt: "desc" }, include: { actor: true } },
-      riskClassification: { include: { completedBy: true } },
+      riskClassification: {
+        include: {
+          completedBy: true,
+          triggeredRegulationRows: { include: { regulation: { include: { artifacts: true } } } },
+        },
+      },
       vendor: true,
       changeEvents: { orderBy: { occurredAt: "desc" }, take: 1 },
     },
@@ -77,6 +82,16 @@ export default async function SystemDetailPage({
     where: { organizationId: actor.organizationId },
     select: { name: true },
   });
+
+  const triggeredRegulations =
+    system.riskClassification?.triggeredRegulationRows.map((row) => ({
+      id: row.regulation.id,
+      code: row.regulation.code,
+      label: row.regulation.label,
+      citation: row.regulation.citation,
+      summary: row.regulation.summary,
+      artifacts: row.regulation.artifacts,
+    })) ?? [];
 
   const isArchived = !!system.archivedAt;
   const canManage = canManageSystem(actor.role);
@@ -104,7 +119,7 @@ export default async function SystemDetailPage({
     }
     if (system.riskClassification) {
       const missingArtifacts = computeRegulationSectionStatuses(
-        system.riskClassification.triggeredRegulations,
+        triggeredRegulations,
         system.evidence,
       ).flatMap((section) => section.artifacts.filter((a) => !a.onFile));
       if (missingArtifacts.length > 0) {
@@ -358,18 +373,18 @@ export default async function SystemDetailPage({
               {USE_CASE_TEMPLATE_LABELS[system.riskClassification.useCaseTemplate]}
             </span>
           </div>
-          {system.riskClassification.triggeredRegulations.length > 0 && (
+          {triggeredRegulations.length > 0 && (
             <div className="mt-3">
               <p className="text-xs text-zinc-500">
                 Likely applies — verify with counsel, this is not a legal determination:
               </p>
               <ul className="mt-1 flex flex-wrap gap-2">
-                {system.riskClassification.triggeredRegulations.map((reg) => (
+                {triggeredRegulations.map((reg) => (
                   <li
-                    key={reg}
+                    key={reg.id}
                     className="rounded bg-zinc-100 px-2 py-0.5 text-xs dark:bg-zinc-800"
                   >
-                    {REGULATION_LABELS[reg]}
+                    {reg.label}
                   </li>
                 ))}
               </ul>

@@ -240,18 +240,83 @@ model ChangeEvent {
 // overwrites this row, with history preserved via a "risk_classified"
 // AuditLogEntry on every run (same pattern as every other mutation).
 model RiskClassification {
-  id                   String           @id @default(cuid())
-  useCaseTemplate      UseCaseTemplate
-  answers              Json
-  riskTier             RiskTier
+  id              String          @id @default(cuid())
+  useCaseTemplate UseCaseTemplate
+  answers         Json
+  riskTier        RiskTier
+  // Deprecated as of the dynamic regulation engine (see RegulationDefinition
+  // below) — left in place, unused by app code, as a one-release safety net
+  // against a backfill mistake rather than dropped immediately.
   triggeredRegulations Regulation[]
-  completedAt          DateTime         @default(now())
+  completedAt          DateTime     @default(now())
 
   aiSystem   AiSystem @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
   aiSystemId String   @unique
 
   completedBy   User   @relation("RiskClassificationCompleter", fields: [completedById], references: [id])
   completedById String
+
+  triggeredRegulationRows RiskClassificationRegulation[]
+}
+
+// Replaces the old fixed `Regulation` enum as the source of truth for what
+// can be triggered — a regulation is a data row, not a code change, so a
+// new state law is a seed insert, not a migration + deploy. `code` mirrors
+// the legacy enum member names for the first 5 (NIST_AI_RMF, EU_AI_ACT,
+// ISO_42001, NYC_LL144, CO_SB21_169) so existing AuditLogEntry.detail JSON
+// referencing those strings stays readable. `triggerConfig` is a small
+// closed discriminated union interpreted by
+// src/lib/risk-classification.ts's computeRiskClassification — see that
+// file for the exact shapes (TIER_AT_LEAST / QUESTION_WEIGHT_AT_LEAST /
+// STATE_DEPLOYMENT).
+model RegulationDefinition {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  label         String
+  citation      String?
+  summary       String?
+  sourceUrl     String?
+  effectiveDate DateTime?
+  triggerConfig Json
+  active        Boolean   @default(true)
+  sortOrder     Int       @default(0)
+
+  artifacts   RegulationArtifactDefinition[]
+  triggeredIn RiskClassificationRegulation[]
+}
+
+// The compliance-checklist items shown for a regulation once triggered —
+// replaces the per-regulation artifact list that used to live in the
+// REGULATION_SECTIONS static map in src/lib/regulation-sections.ts.
+// "onFile" status is still computed generically from EvidenceItem.category,
+// unchanged from before.
+model RegulationArtifactDefinition {
+  id               String           @id @default(cuid())
+  label            String
+  description      String
+  evidenceCategory EvidenceCategory
+  sortOrder        Int              @default(0)
+
+  regulation   RegulationDefinition @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  regulationId String
+
+  @@index([regulationId])
+}
+
+// Join row for "this RiskClassification triggered this regulation" —
+// replaces RiskClassification.triggeredRegulations (an enum array) now
+// that a regulation is a row, not an enum value.
+model RiskClassificationRegulation {
+  id                   String @id @default(cuid())
+
+  riskClassification   RiskClassification @relation(fields: [riskClassificationId], references: [id], onDelete: Cascade)
+  riskClassificationId String
+
+  regulation   RegulationDefinition @relation(fields: [regulationId], references: [id])
+  regulationId String
+
+  @@unique([riskClassificationId, regulationId])
+  @@index([riskClassificationId])
 }
 
 // Fixed MVP stage sequence (see mvp-scope.md): Intake -> Risk Review -> decision.

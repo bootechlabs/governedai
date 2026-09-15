@@ -33,33 +33,47 @@ export async function submitRiskAssessment(aiSystemId: string, formData: FormDat
     answers[question.key] = weight;
   }
 
-  const { riskTier, triggeredRegulations } = computeRiskClassification(template, answers);
+  const regulations = await prisma.regulationDefinition.findMany({
+    where: { active: true },
+    select: { id: true, triggerConfig: true },
+  });
 
-  await prisma.riskClassification.upsert({
-    where: { aiSystemId },
-    create: {
-      aiSystemId,
-      useCaseTemplate: template,
-      answers,
-      riskTier,
-      triggeredRegulations,
-      completedById: actor.id,
-    },
-    update: {
-      useCaseTemplate: template,
-      answers,
-      riskTier,
-      triggeredRegulations,
-      completedById: actor.id,
-      completedAt: new Date(),
-    },
+  // statesDeployed is a Stage B addition (AiSystem.statesDeployed) — no
+  // STATE_DEPLOYMENT-kind regulations exist until then, so [] is correct
+  // for now, not a stand-in for a query that should be here.
+  const { riskTier, triggeredRegulationIds } = computeRiskClassification(template, answers, [], regulations);
+
+  await prisma.$transaction(async (tx) => {
+    const riskClassification = await tx.riskClassification.upsert({
+      where: { aiSystemId },
+      create: { aiSystemId, useCaseTemplate: template, answers, riskTier, completedById: actor.id },
+      update: {
+        useCaseTemplate: template,
+        answers,
+        riskTier,
+        completedById: actor.id,
+        completedAt: new Date(),
+      },
+    });
+
+    await tx.riskClassificationRegulation.deleteMany({
+      where: { riskClassificationId: riskClassification.id },
+    });
+    if (triggeredRegulationIds.length > 0) {
+      await tx.riskClassificationRegulation.createMany({
+        data: triggeredRegulationIds.map((regulationId) => ({
+          riskClassificationId: riskClassification.id,
+          regulationId,
+        })),
+      });
+    }
   });
 
   await logAuditEntry({
     aiSystemId,
     actorId: actor.id,
     action: "risk_classified",
-    detail: { useCaseTemplate: template, riskTier, triggeredRegulations },
+    detail: { useCaseTemplate: template, riskTier, triggeredRegulationIds },
   });
 
   revalidatePath(`/systems/${aiSystemId}`);
