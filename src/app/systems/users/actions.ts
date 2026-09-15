@@ -36,20 +36,34 @@ export async function addUser(formData: FormData) {
     throw new Error("Email is required");
   }
 
+  const existing = await prisma.user.findUnique({
+    where: { organizationId_email: { organizationId: actor.organizationId, email } },
+  });
+  if (existing) {
+    throw new Error(`${email} is already a user in your organization`);
+  }
+
   const host = (await headers()).get("host")!;
   const inviteRedirectUrl = `${currentOrigin(host)}/auth/confirm`;
 
-  const { member } = await stytchClient.magicLinks.email.invite({
-    organization_id: actor.organizationId,
-    email_address: email,
-    name: name ?? undefined,
-    invited_by_member_id: actor.id,
-    invite_redirect_url: inviteRedirectUrl,
-  });
+  let memberId: string;
+  try {
+    const { member } = await stytchClient.magicLinks.email.invite({
+      organization_id: actor.organizationId,
+      email_address: email,
+      name: name ?? undefined,
+      invited_by_member_id: actor.id,
+      invite_redirect_url: inviteRedirectUrl,
+    });
+    memberId = member.member_id;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`Couldn't invite ${email}: ${message}`);
+  }
 
   await prisma.user.create({
     data: {
-      id: member.member_id,
+      id: memberId,
       organizationId: actor.organizationId,
       email,
       name,
