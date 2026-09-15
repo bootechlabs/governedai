@@ -2,9 +2,12 @@ import PDFDocument from "pdfkit";
 import type {
   AiSystem,
   AuditLogEntry,
+  DataClassification,
+  DeploymentStatus,
   EvidenceCategory,
   EvidenceType,
   RiskClassification,
+  RiskTier,
   StageStatus,
   User,
   Vendor,
@@ -38,6 +41,68 @@ export function buildAuditCsv(entries: AuditEntryWithActor[]) {
       .map(csvEscape)
       .join(","),
   );
+  return [header, ...rows].join("\n") + "\n";
+}
+
+export interface PortfolioSystemInput {
+  name: string;
+  businessUnit: string | null;
+  vendorName: string | null;
+  vendor: Vendor | null;
+  classification: DataClassification;
+  deploymentStatus: DeploymentStatus;
+  owner: User;
+  riskClassification: RiskClassification | null;
+  evidence: {
+    category: EvidenceCategory;
+    label: string | null;
+    fileUrl: string | null;
+    linkUrl: string | null;
+  }[];
+}
+
+function missingComplianceCount(system: PortfolioSystemInput): number {
+  return computeRegulationSectionStatuses(
+    system.riskClassification?.triggeredRegulations ?? [],
+    system.evidence,
+  ).flatMap((section) => section.artifacts.filter((a) => !a.onFile)).length;
+}
+
+export function buildPortfolioCsv(systems: PortfolioSystemInput[]) {
+  const header = [
+    "Name",
+    "Owner",
+    "Business Unit",
+    "Vendor",
+    "Classification",
+    "Deployment Status",
+    "Risk Tier",
+    "Triggered Regulations",
+    "Missing Compliance Items",
+  ].join(",");
+
+  const rows = systems.map((system) => {
+    const vendorName = system.vendor?.name ?? system.vendorName ?? "";
+    const riskTier = system.riskClassification?.riskTier ?? "Not assessed";
+    const regulations = (system.riskClassification?.triggeredRegulations ?? [])
+      .map((reg) => REGULATION_LABELS[reg])
+      .join("; ");
+
+    return [
+      system.name,
+      system.owner.name ?? system.owner.email,
+      system.businessUnit ?? "",
+      vendorName,
+      system.classification,
+      system.deploymentStatus,
+      riskTier,
+      regulations,
+      String(missingComplianceCount(system)),
+    ]
+      .map(csvEscape)
+      .join(",");
+  });
+
   return [header, ...rows].join("\n") + "\n";
 }
 
@@ -247,6 +312,98 @@ export async function buildGovernanceReportPdf(input: GovernanceReportInput) {
       doc.fontSize(8).fillColor("#999").text(JSON.stringify(entry.detail), { indent: 12 });
     }
     doc.moveDown(0.25);
+  });
+
+  doc.end();
+  return done;
+}
+
+// One compact block per system, not a full per-system report each — for
+// more than a handful of systems the latter would be enormous and
+// unscannable. The system-level report (above) stays the place for full
+// depth on one system; this is "where does everything stand."
+export async function buildPortfolioReportPdf(
+  organizationName: string,
+  systems: PortfolioSystemInput[],
+) {
+  const doc = new PDFDocument({ margin: 50 });
+  const chunks: Buffer[] = [];
+  doc.on("data", (chunk) => chunks.push(chunk));
+  const done = new Promise<Buffer>((resolve) => {
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+  });
+
+  const logoSize = 28;
+  const logoTop = doc.y;
+  drawLogo(doc, doc.page.margins.left, logoTop, logoSize);
+  doc.y = logoTop + logoSize + 10;
+
+  doc.fontSize(9).fillColor("#666").text("GOVERNEDAI", { characterSpacing: 1 });
+  doc.moveDown(0.5);
+  doc.fontSize(18).fillColor("#000").text(`${organizationName} — Portfolio Governance Summary`);
+  doc
+    .fontSize(9)
+    .fillColor("#666")
+    .text(
+      `Exported ${new Date().toISOString()} — ${systems.length} active system${systems.length === 1 ? "" : "s"}`,
+    );
+  doc.moveDown();
+
+  // --- Aggregate summary ---
+  const riskCounts: Partial<Record<RiskTier, number>> = {};
+  let unassessed = 0;
+  systems.forEach((system) => {
+    if (system.riskClassification) {
+      const tier = system.riskClassification.riskTier;
+      riskCounts[tier] = (riskCounts[tier] ?? 0) + 1;
+    } else {
+      unassessed++;
+    }
+  });
+
+  heading(doc, "Portfolio at a glance");
+  (["LOW", "MODERATE", "HIGH", "CRITICAL"] as const).forEach((tier) => {
+    doc.fontSize(10).fillColor("#333").text(`${tier}: ${riskCounts[tier] ?? 0}`, { indent: 12 });
+  });
+  if (unassessed > 0) {
+    doc.fontSize(10).fillColor("#a83232").text(`Not yet assessed: ${unassessed}`, { indent: 12 });
+  }
+
+  // --- Per-system summary blocks ---
+  heading(doc, "Systems");
+  if (systems.length === 0) {
+    doc.fontSize(10).fillColor("#666").text("No active AI systems.");
+  }
+  systems.forEach((system) => {
+    const vendorName = system.vendor?.name ?? system.vendorName;
+    const regulations = (system.riskClassification?.triggeredRegulations ?? [])
+      .map((reg) => REGULATION_LABELS[reg])
+      .join(", ");
+    const missingCount = missingComplianceCount(system);
+
+    doc.fontSize(11).fillColor("#000").text(system.name);
+    doc
+      .fontSize(9)
+      .fillColor("#666")
+      .text(
+        `${system.classification} · ${system.deploymentStatus}` +
+          (vendorName ? ` · ${vendorName}` : "") +
+          ` · Risk: ${system.riskClassification?.riskTier ?? "Not assessed"}`,
+        { indent: 12 },
+      );
+    if (regulations) {
+      doc.fontSize(9).fillColor("#666").text(`Regulations: ${regulations}`, { indent: 12 });
+    }
+    if (missingCount > 0) {
+      doc
+        .fontSize(9)
+        .fillColor("#a83232")
+        .text(
+          `${missingCount} compliance item${missingCount === 1 ? "" : "s"} missing evidence`,
+          { indent: 12 },
+        );
+    }
+    doc.moveDown(0.4);
   });
 
   doc.end();

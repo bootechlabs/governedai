@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FileSpreadsheet, FileText } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { createAiSystem } from "../actions";
 import { ClassificationBadge, DeploymentStatusBadge, StageStatusBadge, RiskTierBadge } from "@/lib/badges";
@@ -74,6 +75,26 @@ export default async function InventoryPage({
             <Link href="/systems/import" className={subtleLinkClass}>
               Bulk import
             </Link>
+          )}
+          {!showArchived && (
+            <>
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- file download, not a page navigation */}
+              <a
+                href="/systems/portfolio-report?format=csv"
+                className={`flex items-center gap-1 ${subtleLinkClass}`}
+              >
+                <FileSpreadsheet size={14} />
+                Portfolio report (CSV)
+              </a>
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- file download, not a page navigation */}
+              <a
+                href="/systems/portfolio-report?format=pdf"
+                className={`flex items-center gap-1 ${subtleLinkClass}`}
+              >
+                <FileText size={14} />
+                Portfolio report (PDF)
+              </a>
+            </>
           )}
           <Link href={toggleArchivedHref()} className={subtleLinkClass}>
             {showArchived ? `← Active (${activeCount})` : `Archived (${archivedCount})`}
