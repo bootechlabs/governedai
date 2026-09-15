@@ -159,6 +159,7 @@ model User {
   riskClassificationsCompleted RiskClassification[] @relation("RiskClassificationCompleter")
   impersonationsInitiated ImpersonationSession[] @relation("ImpersonationInitiator")
   impersonationsReceived  ImpersonationSession[] @relation("ImpersonationTarget")
+  changeEventsRecorded    ChangeEvent[]          @relation("ChangeEventActor")
 
   @@unique([organizationId, email])
 }
@@ -209,8 +210,29 @@ model AiSystem {
   evidence           EvidenceItem[]
   auditLog           AuditLogEntry[]
   riskClassification RiskClassification?
+  changeEvents       ChangeEvent[]
 
   @@index([organizationId])
+}
+
+// One row per key-field change (see src/lib/change-events.ts for which
+// fields count) — immutable, like AuditLogEntry. Recertification need is
+// computed from these against WorkflowStage.decidedAt, not a stored flag
+// — see src/lib/workflow.ts needsRecertification.
+model ChangeEvent {
+  id          String   @id @default(cuid())
+  field       String
+  beforeValue String?
+  afterValue  String?
+  occurredAt  DateTime @default(now())
+
+  aiSystem   AiSystem @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+  aiSystemId String
+
+  actor   User   @relation("ChangeEventActor", fields: [actorId], references: [id])
+  actorId String
+
+  @@index([aiSystemId])
 }
 
 // Produced by the intake questionnaire (src/lib/risk-classification.ts) —

@@ -17,3 +17,24 @@ export function isStageActionable(status: StageStatus) {
 export function requiresRationale(status: StageStatus) {
   return status === "REJECTED" || status === "CONDITIONALLY_APPROVED";
 }
+
+// No stored "needs recertification" flag to keep in sync — computed from
+// data that already exists: a system needs recertification if something
+// governance-relevant changed (see src/lib/change-events.ts) after the
+// most recent decision on any of its stages. A system with no decided
+// stages yet isn't "needs recertification" — that's the ordinary
+// "pending review" case, already surfaced separately.
+export function needsRecertification(
+  latestChangeAt: Date | null,
+  stages: { decidedAt: Date | null }[],
+): boolean {
+  if (!latestChangeAt) return false;
+
+  const decidedDates = stages
+    .map((s) => s.decidedAt)
+    .filter((d): d is Date => d !== null);
+  if (decidedDates.length === 0) return false;
+
+  const latestDecisionAt = new Date(Math.max(...decidedDates.map((d) => d.getTime())));
+  return latestChangeAt > latestDecisionAt;
+}

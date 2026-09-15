@@ -27,7 +27,7 @@ import {
   EvidenceCategoryBadge,
   evidenceCategoryLabels,
 } from "@/lib/badges";
-import { isStageActionable } from "@/lib/workflow";
+import { isStageActionable, needsRecertification } from "@/lib/workflow";
 import { USE_CASE_TEMPLATE_LABELS, REGULATION_LABELS } from "@/lib/risk-classification";
 import { computeRegulationSectionStatuses } from "@/lib/regulation-sections";
 import { inputClass, primaryButtonClass, subtleLinkClass } from "@/lib/ui";
@@ -54,6 +54,7 @@ export default async function SystemDetailPage({
       auditLog: { orderBy: { occurredAt: "desc" }, include: { actor: true } },
       riskClassification: { include: { completedBy: true } },
       vendor: true,
+      changeEvents: { orderBy: { occurredAt: "desc" }, take: 1 },
     },
   });
 
@@ -68,6 +69,10 @@ export default async function SystemDetailPage({
   const canManage = canManageSystem(actor.role);
   const canDecide = canDecideStage(actor.role);
   const canAssessRisk = canCreateSystem(actor.role);
+  const needsRecert = needsRecertification(
+    system.changeEvents[0]?.occurredAt ?? null,
+    system.stages,
+  );
 
   // Everything a reviewer would otherwise have to read all five sections
   // to find — built from data already fetched above, no extra queries.
@@ -92,6 +97,9 @@ export default async function SystemDetailPage({
           `${missingArtifacts.length} compliance item${missingArtifacts.length === 1 ? "" : "s"} missing evidence`,
         );
       }
+    }
+    if (needsRecert) {
+      actionItems.push("Changed since last review — recertification recommended");
     }
   }
 
@@ -321,7 +329,12 @@ export default async function SystemDetailPage({
                 {stage.decisionRationale}
               </p>
             )}
-            {isStageActionable(stage.status) && !isArchived && canDecide ? (
+            {needsRecert && !isStageActionable(stage.status) && (
+              <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                Changed since this decision — recertify below.
+              </p>
+            )}
+            {(isStageActionable(stage.status) || needsRecert) && !isArchived && canDecide ? (
               <form action={decideStage.bind(null, stage.id)} className="mt-3 flex flex-col gap-2">
                 <input
                   name="rationale"

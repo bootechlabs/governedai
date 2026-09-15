@@ -9,6 +9,7 @@ import { logAuditEntry } from "@/lib/audit-log";
 import { createAiSystemRecord, assertSystemEditable, resolveVendorId } from "@/lib/ai-systems";
 import { canCreateSystem, canManageSystem, canDecideStage } from "@/lib/permissions";
 import { requiresRationale } from "@/lib/workflow";
+import { detectChanges } from "@/lib/change-events";
 import type { DataClassification, DeploymentStatus, StageStatus, EvidenceCategory } from "@prisma/client";
 
 function parseAiSystemFields(formData: FormData) {
@@ -75,6 +76,32 @@ export async function updateAiSystem(aiSystemId: string, formData: FormData) {
       after: fields,
     },
   });
+
+  const changes = detectChanges(
+    {
+      vendorName: before.vendorName,
+      classification: before.classification,
+      deploymentStatus: before.deploymentStatus,
+      businessUnit: before.businessUnit,
+    },
+    {
+      vendorName: fields.vendorName,
+      classification: fields.classification,
+      deploymentStatus: fields.deploymentStatus,
+      businessUnit: fields.businessUnit,
+    },
+  );
+  if (changes.length > 0) {
+    await prisma.changeEvent.createMany({
+      data: changes.map((change) => ({
+        aiSystemId,
+        actorId: actor.id,
+        field: change.field,
+        beforeValue: change.beforeValue,
+        afterValue: change.afterValue,
+      })),
+    });
+  }
 
   revalidatePath("/systems");
   revalidatePath(`/systems/${aiSystemId}`);

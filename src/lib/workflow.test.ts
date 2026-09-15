@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { isStageActionable, requiresRationale, DEFAULT_WORKFLOW_STAGES } from "./workflow";
+import {
+  isStageActionable,
+  requiresRationale,
+  needsRecertification,
+  DEFAULT_WORKFLOW_STAGES,
+} from "./workflow";
 import type { StageStatus } from "@prisma/client";
 
 describe("isStageActionable", () => {
@@ -27,6 +32,34 @@ describe("requiresRationale", () => {
     for (const status of noRationaleNeeded) {
       expect(requiresRationale(status)).toBe(false);
     }
+  });
+});
+
+describe("needsRecertification", () => {
+  it("is false when there's no change event", () => {
+    expect(needsRecertification(null, [{ decidedAt: new Date("2026-01-01") }])).toBe(false);
+  });
+
+  it("is false when no stage has been decided yet — that's ordinary pending review, not recertification", () => {
+    expect(needsRecertification(new Date("2026-01-01"), [{ decidedAt: null }])).toBe(false);
+  });
+
+  it("is false when the change happened before the last decision", () => {
+    expect(
+      needsRecertification(new Date("2026-01-01"), [{ decidedAt: new Date("2026-02-01") }]),
+    ).toBe(false);
+  });
+
+  it("is true when the change happened after the last decision", () => {
+    expect(
+      needsRecertification(new Date("2026-03-01"), [{ decidedAt: new Date("2026-02-01") }]),
+    ).toBe(true);
+  });
+
+  it("compares against the most recent decision across multiple stages", () => {
+    const stages = [{ decidedAt: new Date("2026-01-01") }, { decidedAt: new Date("2026-02-15") }];
+    expect(needsRecertification(new Date("2026-02-01"), stages)).toBe(false);
+    expect(needsRecertification(new Date("2026-03-01"), stages)).toBe(true);
   });
 });
 
