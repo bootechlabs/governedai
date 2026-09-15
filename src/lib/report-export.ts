@@ -264,6 +264,25 @@ export async function buildGovernanceReportPdf(input: GovernanceReportInput) {
         .text(`Human review before finalization: ${humanReviewAnswer === 0 ? "Yes" : "No"}`);
     }
 
+    // --- Supplementary risk assessment (slice 8) — GovernedAI's own
+    // secondary lens, independent of the main risk tier above. Only
+    // rendered when present, since rows from before this shipped have
+    // neither field. ---
+    if (riskClassification.lifeSafetyTier || riskClassification.techDataTier) {
+      heading(doc, "Supplementary Risk Assessment");
+      if (riskClassification.lifeSafetyTier) {
+        doc.fontSize(10).fillColor("#333").text(`Life & patient safety: ${riskClassification.lifeSafetyTier}`);
+      }
+      if (riskClassification.techDataTier) {
+        doc.fontSize(10).fillColor("#333").text(`Technology & data: ${riskClassification.techDataTier}`);
+      }
+      doc
+        .moveDown(0.25)
+        .fontSize(8)
+        .fillColor("#999")
+        .text("GovernedAI's own risk lens — not derived from or aligned to any external certification or proprietary framework.");
+    }
+
     // --- Law-specific sections (only ones with a checkable artifact —
     // broad frameworks like NIST AI RMF/ISO 42001 have none) ---
     const sections = computeRegulationSectionStatuses(triggeredRegulations, evidence).filter(

@@ -2,8 +2,11 @@ import { describe, it, expect } from "vitest";
 import {
   getQuestionsForTemplate,
   computeRiskClassification,
+  computeSecondaryRiskTiers,
   getTrackedStates,
   CORE_QUESTIONS,
+  LIFE_SAFETY_QUESTIONS,
+  TECH_DATA_QUESTIONS,
   type RegulationTriggerInput,
 } from "./risk-classification";
 
@@ -154,5 +157,35 @@ describe("getTrackedStates", () => {
 
   it("ignores non-STATE_DEPLOYMENT regulations", () => {
     expect(getTrackedStates(LEGACY_REGULATIONS)).toEqual([]);
+  });
+});
+
+describe("computeSecondaryRiskTiers", () => {
+  it("scores both domains as LOW when every answer is 0", () => {
+    const result = computeSecondaryRiskTiers({});
+    expect(result).toEqual({ lifeSafetyTier: "LOW", techDataTier: "LOW" });
+  });
+
+  it("scores both domains as CRITICAL when every answer is maxed", () => {
+    const allMax = Object.fromEntries(
+      [...LIFE_SAFETY_QUESTIONS, ...TECH_DATA_QUESTIONS].map((q) => [q.key, 3]),
+    );
+    const result = computeSecondaryRiskTiers(allMax);
+    expect(result).toEqual({ lifeSafetyTier: "CRITICAL", techDataTier: "CRITICAL" });
+  });
+
+  it("scores the two domains independently", () => {
+    const lifeSafetyOnly = Object.fromEntries(LIFE_SAFETY_QUESTIONS.map((q) => [q.key, 3]));
+    const result = computeSecondaryRiskTiers(lifeSafetyOnly);
+    expect(result.lifeSafetyTier).toBe("CRITICAL");
+    expect(result.techDataTier).toBe("LOW");
+  });
+
+  it("does not let core/template answers leak into the secondary score", () => {
+    // Same keys as the main questionnaire, maxed out — should have zero
+    // effect on either secondary tier, since they score only their own keys.
+    const coreOnly = Object.fromEntries(CORE_QUESTIONS.map((q) => [q.key, 3]));
+    const result = computeSecondaryRiskTiers(coreOnly);
+    expect(result).toEqual({ lifeSafetyTier: "LOW", techDataTier: "LOW" });
   });
 });

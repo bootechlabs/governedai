@@ -7,7 +7,13 @@ import { getCurrentUser } from "@/lib/current-user";
 import { canCreateSystem } from "@/lib/permissions";
 import { assertSystemEditable } from "@/lib/ai-systems";
 import { logAuditEntry } from "@/lib/audit-log";
-import { getQuestionsForTemplate, computeRiskClassification } from "@/lib/risk-classification";
+import {
+  getQuestionsForTemplate,
+  computeRiskClassification,
+  computeSecondaryRiskTiers,
+  LIFE_SAFETY_QUESTIONS,
+  TECH_DATA_QUESTIONS,
+} from "@/lib/risk-classification";
 import type { UseCaseTemplate } from "@prisma/client";
 
 export async function submitRiskAssessment(aiSystemId: string, formData: FormData) {
@@ -24,7 +30,7 @@ export async function submitRiskAssessment(aiSystemId: string, formData: FormDat
   }
 
   const answers: Record<string, number> = {};
-  for (const question of questions) {
+  for (const question of [...questions, ...LIFE_SAFETY_QUESTIONS, ...TECH_DATA_QUESTIONS]) {
     const raw = formData.get(question.key);
     const weight = Number(raw);
     if (raw === null || Number.isNaN(weight)) {
@@ -44,15 +50,26 @@ export async function submitRiskAssessment(aiSystemId: string, formData: FormDat
     system.statesDeployed,
     regulations,
   );
+  const { lifeSafetyTier, techDataTier } = computeSecondaryRiskTiers(answers);
 
   await prisma.$transaction(async (tx) => {
     const riskClassification = await tx.riskClassification.upsert({
       where: { aiSystemId },
-      create: { aiSystemId, useCaseTemplate: template, answers, riskTier, completedById: actor.id },
+      create: {
+        aiSystemId,
+        useCaseTemplate: template,
+        answers,
+        riskTier,
+        lifeSafetyTier,
+        techDataTier,
+        completedById: actor.id,
+      },
       update: {
         useCaseTemplate: template,
         answers,
         riskTier,
+        lifeSafetyTier,
+        techDataTier,
         completedById: actor.id,
         completedAt: new Date(),
       },

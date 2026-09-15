@@ -298,6 +298,14 @@ model RiskClassification {
   useCaseTemplate      UseCaseTemplate
   answers              Json
   riskTier             RiskTier
+  // A secondary, independently-authored risk lens (slice 8) — split
+  // across two domains, computed separately from riskTier above via
+  // computeSecondaryRiskTiers in src/lib/risk-classification.ts. Nullable
+  // because rows from before this shipped have neither, correctly (not a
+  // data gap to backfill). Not derived from or aligned to any external
+  // certification/proprietary framework.
+  lifeSafetyTier       RiskTier?
+  techDataTier         RiskTier?
   // Deprecated as of the dynamic regulation engine (see RegulationDefinition
   // below) — left in place, unused by app code, as a one-release safety net
   // against a backfill mistake rather than dropped immediately.

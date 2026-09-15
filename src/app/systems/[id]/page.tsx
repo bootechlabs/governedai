@@ -410,6 +410,26 @@ export default async function SystemDetailPage({
               {USE_CASE_TEMPLATE_LABELS[system.riskClassification.useCaseTemplate]}
             </span>
           </div>
+          {(system.riskClassification.lifeSafetyTier || system.riskClassification.techDataTier) && (
+            <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+              {system.riskClassification.lifeSafetyTier && (
+                <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+                  Life &amp; patient safety
+                  <RiskTierBadge value={system.riskClassification.lifeSafetyTier} />
+                </span>
+              )}
+              {system.riskClassification.techDataTier && (
+                <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+                  Technology &amp; data
+                  <RiskTierBadge value={system.riskClassification.techDataTier} />
+                </span>
+              )}
+              <span className="text-xs text-zinc-400">
+                GovernedAI&apos;s own supplementary risk lens — not derived from any external
+                certification or proprietary framework.
+              </span>
+            </div>
+          )}
           {triggeredRegulations.length > 0 && (
             <div className="mt-3">
               <p className="text-xs text-zinc-500">

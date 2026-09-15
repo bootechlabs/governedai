@@ -221,6 +221,82 @@ export const USE_CASE_TEMPLATE_LABELS: Record<UseCaseTemplate, string> = {
   GENERIC: "Generic / other",
 };
 
+// Secondary, independently-authored risk lens (slice 8) — asked on every
+// assessment alongside the core/template questions above, but scored
+// separately (see computeSecondaryRiskTiers below) and never folded into
+// the main risk-tier percentage, so adding these doesn't change the
+// meaning of an existing riskTier. Two domains, a generic split used
+// across published AI risk-management literature (not any one
+// organization's proprietary taxonomy): how close this gets to patient
+// care/safety, and how sound the underlying technology/data practices
+// are. Original wording — not derived from or aligned to any external
+// certification or proprietary framework.
+export const LIFE_SAFETY_QUESTIONS: RiskQuestion[] = [
+  {
+    key: "patientProximity",
+    text: "How directly does this system's output reach a patient care encounter?",
+    options: [
+      { label: "No direct patient-care involvement — administrative or population-level only", weight: 0 },
+      { label: "Indirectly informs patient care support (e.g., scheduling, non-clinical communication)", weight: 1 },
+      { label: "Directly informs a clinician's patient-specific decision", weight: 2 },
+      { label: "Directly interacts with or acts on a patient without a clinician intermediary", weight: 3 },
+    ],
+  },
+  {
+    key: "harmSeverityIfWrong",
+    text: "If this system produces an incorrect output, what's the worst realistic harm to a patient?",
+    options: [
+      { label: "No plausible harm", weight: 0 },
+      { label: "Minor, reversible inconvenience or delay", weight: 1 },
+      { label: "Harm requiring clinical intervention to correct", weight: 2 },
+      { label: "Permanent harm, disability, or death", weight: 3 },
+    ],
+  },
+  {
+    key: "monitoringMaturity",
+    text: "How mature is your ability to detect a safety-relevant failure of this system in real time?",
+    options: [
+      { label: "Automated, real-time monitoring in place", weight: 0 },
+      { label: "Periodic manual review", weight: 1 },
+      { label: "Only reviewed after a complaint or incident", weight: 2 },
+      { label: "No monitoring process exists", weight: 3 },
+    ],
+  },
+];
+
+export const TECH_DATA_QUESTIONS: RiskQuestion[] = [
+  {
+    key: "dataProvenanceConfidence",
+    text: "How well-documented and trustworthy is the origin of this system's training or operating data?",
+    options: [
+      { label: "Fully documented, from reputable, audited sources", weight: 0 },
+      { label: "Mostly documented, with minor gaps", weight: 1 },
+      { label: "Limited documentation of data origin", weight: 2 },
+      { label: "Unknown or undocumented provenance", weight: 3 },
+    ],
+  },
+  {
+    key: "externalExposure",
+    text: "What is this system's network or deployment exposure?",
+    options: [
+      { label: "Fully isolated, no external interfaces", weight: 0 },
+      { label: "Internal network only", weight: 1 },
+      { label: "Exposed to the internet with meaningful controls", weight: 2 },
+      { label: "Directly internet-facing with minimal controls", weight: 3 },
+    ],
+  },
+  {
+    key: "changeManagementRigor",
+    text: "How controlled is the process for updating or retraining this system?",
+    options: [
+      { label: "Formal, versioned pipeline with rollback capability", weight: 0 },
+      { label: "Controlled but partially manual", weight: 1 },
+      { label: "Ad hoc, undocumented updates", weight: 2 },
+      { label: "Continuous or unsupervised learning in production", weight: 3 },
+    ],
+  },
+];
+
 export function getQuestionsForTemplate(template: UseCaseTemplate): RiskQuestion[] {
   return [...CORE_QUESTIONS, ...TEMPLATE_QUESTIONS[template]];
 }
@@ -234,6 +310,26 @@ const TIER_THRESHOLDS: { max: number; tier: RiskTier }[] = [
 
 function tierFromPercent(pct: number): RiskTier {
   return TIER_THRESHOLDS.find((t) => pct <= t.max)!.tier;
+}
+
+function scoreQuestions(questions: RiskQuestion[], answers: Record<string, number>): RiskTier {
+  const maxPossible = questions.length * 3;
+  const total = questions.reduce((sum, q) => sum + (answers[q.key] ?? 0), 0);
+  const pct = maxPossible === 0 ? 0 : Math.round((total / maxPossible) * 100);
+  return tierFromPercent(pct);
+}
+
+// Independent of computeRiskClassification's main riskTier — same
+// answers bag, but scored over only the LIFE_SAFETY_QUESTIONS /
+// TECH_DATA_QUESTIONS keys, so adding these questions never changes the
+// main tier's meaning for existing or future assessments.
+export function computeSecondaryRiskTiers(
+  answers: Record<string, number>,
+): { lifeSafetyTier: RiskTier; techDataTier: RiskTier } {
+  return {
+    lifeSafetyTier: scoreQuestions(LIFE_SAFETY_QUESTIONS, answers),
+    techDataTier: scoreQuestions(TECH_DATA_QUESTIONS, answers),
+  };
 }
 
 // A regulation is a RegulationDefinition row (see prisma/schema.prisma),
@@ -295,11 +391,7 @@ export function computeRiskClassification(
   statesDeployed: string[],
   regulations: RegulationTriggerInput[],
 ): { riskTier: RiskTier; triggeredRegulationIds: string[] } {
-  const questions = getQuestionsForTemplate(template);
-  const maxPossible = questions.length * 3;
-  const total = questions.reduce((sum, q) => sum + (answers[q.key] ?? 0), 0);
-  const pct = maxPossible === 0 ? 0 : Math.round((total / maxPossible) * 100);
-  const riskTier = tierFromPercent(pct);
+  const riskTier = scoreQuestions(getQuestionsForTemplate(template), answers);
 
   const context = { riskTier, answers, template, statesDeployed };
   const triggeredRegulationIds = regulations
