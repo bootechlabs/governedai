@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/current-user";
 import { canManageUsers } from "@/lib/permissions";
 import { stytchClient } from "@/lib/stytch";
 import { currentOrigin } from "@/lib/url";
+import { duplicateUserMessage, formatInviteError } from "@/lib/user-invite";
 import type { UserRole } from "@prisma/client";
 
 async function requireAdmin() {
@@ -39,8 +40,9 @@ export async function addUser(formData: FormData) {
   const existing = await prisma.user.findUnique({
     where: { organizationId_email: { organizationId: actor.organizationId, email } },
   });
-  if (existing) {
-    throw new Error(`${email} is already a user in your organization`);
+  const duplicateMessage = duplicateUserMessage(email, existing);
+  if (duplicateMessage) {
+    throw new Error(duplicateMessage);
   }
 
   const host = (await headers()).get("host")!;
@@ -57,8 +59,7 @@ export async function addUser(formData: FormData) {
     });
     memberId = member.member_id;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    throw new Error(`Couldn't invite ${email}: ${message}`);
+    throw new Error(formatInviteError(email, error));
   }
 
   await prisma.user.create({

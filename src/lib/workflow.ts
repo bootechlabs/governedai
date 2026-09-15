@@ -10,3 +10,10 @@ export const DEFAULT_WORKFLOW_STAGES = [
 export function isStageActionable(status: StageStatus) {
   return status === "PENDING" || status === "IN_REVIEW";
 }
+
+// A rejection or conditional approval with no rationale is an incomplete
+// audit trail the moment it's recorded — see src/app/systems/actions.ts
+// decideStage, which enforces this before writing anything.
+export function requiresRationale(status: StageStatus) {
+  return status === "REJECTED" || status === "CONDITIONALLY_APPROVED";
+}

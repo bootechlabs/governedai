@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isStageActionable, DEFAULT_WORKFLOW_STAGES } from "./workflow";
+import { isStageActionable, requiresRationale, DEFAULT_WORKFLOW_STAGES } from "./workflow";
 import type { StageStatus } from "@prisma/client";
 
 describe("isStageActionable", () => {
@@ -12,6 +12,20 @@ describe("isStageActionable", () => {
     const terminal: StageStatus[] = ["APPROVED", "CONDITIONALLY_APPROVED", "REJECTED"];
     for (const status of terminal) {
       expect(isStageActionable(status)).toBe(false);
+    }
+  });
+});
+
+describe("requiresRationale", () => {
+  it("is true for REJECTED and CONDITIONALLY_APPROVED", () => {
+    expect(requiresRationale("REJECTED")).toBe(true);
+    expect(requiresRationale("CONDITIONALLY_APPROVED")).toBe(true);
+  });
+
+  it("is false for APPROVED, IN_REVIEW, and PENDING", () => {
+    const noRationaleNeeded: StageStatus[] = ["APPROVED", "IN_REVIEW", "PENDING"];
+    for (const status of noRationaleNeeded) {
+      expect(requiresRationale(status)).toBe(false);
     }
   });
 });

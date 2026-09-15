@@ -8,6 +8,7 @@ import { uploadEvidenceFile } from "@/lib/storage";
 import { logAuditEntry } from "@/lib/audit-log";
 import { createAiSystemRecord, assertSystemEditable, resolveVendorId } from "@/lib/ai-systems";
 import { canCreateSystem, canManageSystem, canDecideStage } from "@/lib/permissions";
+import { requiresRationale } from "@/lib/workflow";
 import type { DataClassification, DeploymentStatus, StageStatus, EvidenceCategory } from "@prisma/client";
 
 function parseAiSystemFields(formData: FormData) {
@@ -147,10 +148,7 @@ export async function decideStage(stageId: string, formData: FormData) {
   if (!status) {
     throw new Error("Status is required");
   }
-  // A rejection or a conditional approval without a rationale is an
-  // incomplete audit trail the moment it's recorded — enforced here,
-  // not left to be caught later in review.
-  if ((status === "REJECTED" || status === "CONDITIONALLY_APPROVED") && !rationale) {
+  if (requiresRationale(status) && !rationale) {
     throw new Error("A rationale is required to reject or conditionally approve a stage");
   }
 
