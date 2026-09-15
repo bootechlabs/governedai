@@ -68,12 +68,44 @@ export default async function ApiDocsPage() {
         <code>deploymentStatus</code>: PLANNED (default), PILOT, PRODUCTION, RETIRED.
       </p>
 
+      <h2 className="mt-6 font-medium">Update an AI system</h2>
+      <p className="mt-1 text-zinc-500">
+        <code>PUT /api/v1/ai-systems/:id</code> — full replace, same fields and defaults as
+        registering one. A change to <code>vendorName</code>, <code>classification</code>,{" "}
+        <code>deploymentStatus</code>, or <code>businessUnit</code> is logged and can trigger
+        recertification, same as editing it in the UI.
+      </p>
+      <pre className={codeClass}>
+{`curl -X PUT https://app.governedai.co/api/v1/ai-systems/abc123 \\
+  -H "Authorization: Bearer gai_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "Claims Triage Assistant",
+    "classification": "RESTRICTED",
+    "deploymentStatus": "PRODUCTION"
+  }'`}
+      </pre>
+      <p className="mt-2 text-zinc-500">
+        <code>409</code> if the system is archived — unarchive it in the UI first.
+      </p>
+
+      <h2 className="mt-6 font-medium">Archive an AI system</h2>
+      <p className="mt-1 text-zinc-500">
+        <code>DELETE /api/v1/ai-systems/:id</code> — archives the system; it isn&apos;t removed.
+        Workflow, evidence, and audit history stay intact and reviewable, same as archiving from
+        the UI. There is no endpoint for a permanent delete.
+      </p>
+      <pre className={codeClass}>
+{`curl -X DELETE https://app.governedai.co/api/v1/ai-systems/abc123 \\
+  -H "Authorization: Bearer gai_..."`}
+      </pre>
+
       <h2 className="mt-6 font-medium">Errors</h2>
       <p className="mt-1 text-zinc-500">
         <code>401</code> for a missing/invalid/revoked key, <code>400</code> for a validation
         error (e.g. missing name, invalid classification), <code>404</code> for an id that
-        doesn&apos;t exist or belongs to another organization. Every error body is{" "}
-        <code>{"{ \"error\": \"...\" }"}</code>.
+        doesn&apos;t exist or belongs to another organization, <code>409</code> for an update to
+        an archived system. Every error body is <code>{"{ \"error\": \"...\" }"}</code>.
       </p>
     </div>
   );

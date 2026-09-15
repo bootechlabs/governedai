@@ -16,7 +16,7 @@ Live at app.governedai.co (Vercel), real org (Bootech) provisioned.
 - **Vendor registry + evidence-type tagging** (slice 4): admin-managed `Vendor` entity (BAA status, subprocessors, SOC 2/model card links) at `/systems/vendors`, auto-linked to a system when its vendor name matches exactly — additive, not a breaking change to the existing free-text field. Evidence now carries a `category` (BAA, SOC 2 report, model card, bias audit report, etc.).
 - **Full governance report** (slice 5): `/systems/[id]/audit?format=pdf` is a real report — system record, risk classification, per-regulation compliance checklists (checked against real attached evidence, not fabricated findings), workflow history, evidence list, audit trail, GovernedAI-branded. CSV export stays a flat audit-log dump — different tool for a different job.
 - **Bulk import**: `/systems/import`, CSV or Excel.
-- **Public API**: `/api/v1/ai-systems` (list/get/create), per-org API keys at `/systems/api-keys`. No update/delete endpoints yet.
+- **Public API**: `/api/v1/ai-systems` (list/get/create/update, plus archive-not-delete), per-org API keys at `/systems/api-keys`. `PUT` is a full-replace update that triggers change-event/recertification logic same as the UI; `DELETE` archives (preserves history) rather than hard-deleting — no permanent-delete endpoint exists.
 - **Platform-admin layer** (beyond original v0.1 scope): `User.isPlatformAdmin` gates `/platform` — a global dashboard across every org/vertical, and an impersonation flow (view-as any org's user, time-boxed to 1 hour, email + audit-logged, banner + one-click stop). Built because supporting multiple real customers with zero cross-org visibility wasn't viable.
 - **Icons + legend**: nav, page headings, and section headings are icon-led; `/systems/legend` explains every one, generated from the same config objects the badges use so it can't drift.
 - **UI/UX pass 1**: consistent status-color vocabulary, an action-summary callout on system detail, distinct-weighted review/approval buttons with a server-enforced rationale requirement, dashboard hierarchy + filtered inventory links, self-service profile pictures.
@@ -25,7 +25,6 @@ Live at app.governedai.co (Vercel), real org (Bootech) provisioned.
 - **Portfolio-level report export**: `/systems/portfolio-report?format=csv|pdf` — CSV is one row per active system (risk tier, triggered regulations, missing-evidence count); PDF is an aggregate summary (risk-tier breakdown) plus a compact block per system, entry points on `/systems/inventory`.
 
 **Not yet built:**
-- Update/delete on the public API.
 - Stytch Live environment cutover (still on Test).
 - Resend domain verification (impersonation email currently no-ops).
 
