@@ -160,6 +160,7 @@ model User {
   impersonationsInitiated ImpersonationSession[] @relation("ImpersonationInitiator")
   impersonationsReceived  ImpersonationSession[] @relation("ImpersonationTarget")
   changeEventsRecorded    ChangeEvent[]          @relation("ChangeEventActor")
+  shareLinksCreated       ShareLink[]            @relation("ShareLinkCreator")
 
   @@unique([organizationId, email])
 }
@@ -216,6 +217,7 @@ model AiSystem {
   auditLog           AuditLogEntry[]
   riskClassification RiskClassification?
   changeEvents       ChangeEvent[]
+  shareLinks         ShareLink[]
 
   @@index([organizationId])
 }
@@ -238,6 +240,44 @@ model ChangeEvent {
   actorId String
 
   @@index([aiSystemId])
+}
+
+// Token-based, time-boxed, revocable read-only link for handing a
+// system's governance report to an external auditor — see
+// src/lib/share-links.ts. Only tokenHash is stored (sha256 of the
+// plaintext, shown once at creation) — same pattern as ApiKey.keyHash.
+// Anonymous views are tracked via ShareLinkView, not AuditLogEntry:
+// AuditLogEntry.actorId is NOT NULL and every other write-path assumes
+// an authenticated actor, so an anonymous view gets its own table
+// rather than loosening that system-wide invariant.
+model ShareLink {
+  id          String    @id @default(cuid())
+  tokenHash   String    @unique
+  tokenPrefix String
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  aiSystem   AiSystem @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+  aiSystemId String
+
+  createdBy   User   @relation("ShareLinkCreator", fields: [createdById], references: [id])
+  createdById String
+
+  views ShareLinkView[]
+
+  @@index([aiSystemId])
+}
+
+model ShareLinkView {
+  id       String   @id @default(cuid())
+  viewedAt DateTime @default(now())
+  viewerIp String?
+
+  shareLink   ShareLink @relation(fields: [shareLinkId], references: [id], onDelete: Cascade)
+  shareLinkId String
+
+  @@index([shareLinkId])
 }
 
 // Produced by the intake questionnaire (src/lib/risk-classification.ts) —

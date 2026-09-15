@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import { uploadEvidenceFile } from "@/lib/storage";
@@ -10,6 +11,7 @@ import { createAiSystemRecord, assertSystemEditable, resolveVendorId } from "@/l
 import { canCreateSystem, canManageSystem, canDecideStage } from "@/lib/permissions";
 import { requiresRationale } from "@/lib/workflow";
 import { detectChanges, serializeStatesDeployed } from "@/lib/change-events";
+import { generateShareToken, SHARE_LINK_DURATIONS_DAYS } from "@/lib/share-links";
 import type { DataClassification, DeploymentStatus, StageStatus, EvidenceCategory } from "@prisma/client";
 
 function parseAiSystemFields(formData: FormData) {
@@ -264,6 +266,78 @@ export async function attachEvidence(aiSystemId: string, formData: FormData) {
     actorId: actor.id,
     action: "evidence_attached",
     detail: { evidenceId: evidence.id, type: evidence.type, category: evidence.category, label: evidence.label },
+  });
+
+  revalidatePath(`/systems/${aiSystemId}`);
+}
+
+// Creating an external, unauthenticated access link is a more sensitive
+// action than viewing or exporting a report — gated ADMIN-only, same
+// tier as archive/delete, not the broader canDecideStage/canCreateSystem
+// roles that can already see the report itself.
+export interface CreateShareLinkResult {
+  url: string;
+  expiresAt: string;
+}
+
+export async function createShareLink(
+  aiSystemId: string,
+  _prevState: CreateShareLinkResult | null,
+  formData: FormData,
+): Promise<CreateShareLinkResult> {
+  const actor = await getCurrentUser();
+  if (!canManageSystem(actor.role)) {
+    throw new Error("Your role can't create share links");
+  }
+  const system = await prisma.aiSystem.findUniqueOrThrow({ where: { id: aiSystemId } });
+  if (system.organizationId !== actor.organizationId) {
+    throw new Error("Not found");
+  }
+
+  const days = Number(formData.get("expiresInDays"));
+  if (!SHARE_LINK_DURATIONS_DAYS.includes(days as (typeof SHARE_LINK_DURATIONS_DAYS)[number])) {
+    throw new Error("Invalid expiration");
+  }
+  const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+
+  const { plaintext, tokenPrefix, tokenHash } = generateShareToken();
+  await prisma.shareLink.create({
+    data: { tokenHash, tokenPrefix, expiresAt, aiSystemId, createdById: actor.id },
+  });
+
+  await logAuditEntry({
+    aiSystemId,
+    actorId: actor.id,
+    action: "share_link_created",
+    detail: { tokenPrefix, expiresAt: expiresAt.toISOString() },
+  });
+
+  const headersList = await headers();
+  const host = headersList.get("host");
+  const proto = headersList.get("x-forwarded-proto") ?? (process.env.NODE_ENV === "production" ? "https" : "http");
+
+  revalidatePath(`/systems/${aiSystemId}`);
+  return { url: `${proto}://${host}/share/${plaintext}`, expiresAt: expiresAt.toISOString() };
+}
+
+export async function revokeShareLink(aiSystemId: string, shareLinkId: string) {
+  const actor = await getCurrentUser();
+  if (!canManageSystem(actor.role)) {
+    throw new Error("Your role can't revoke share links");
+  }
+  const shareLink = await prisma.shareLink.findUniqueOrThrow({ where: { id: shareLinkId } });
+  const system = await prisma.aiSystem.findUniqueOrThrow({ where: { id: shareLink.aiSystemId } });
+  if (system.organizationId !== actor.organizationId) {
+    throw new Error("Not found");
+  }
+
+  await prisma.shareLink.update({ where: { id: shareLinkId }, data: { revokedAt: new Date() } });
+
+  await logAuditEntry({
+    aiSystemId,
+    actorId: actor.id,
+    action: "share_link_revoked",
+    detail: { tokenPrefix: shareLink.tokenPrefix },
   });
 
   revalidatePath(`/systems/${aiSystemId}`);

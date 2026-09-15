@@ -32,6 +32,8 @@ import { USE_CASE_TEMPLATE_LABELS, getTrackedStates } from "@/lib/risk-classific
 import { computeRegulationSectionStatuses } from "@/lib/regulation-sections";
 import { inputClass, primaryButtonClass, subtleLinkClass } from "@/lib/ui";
 import { DeleteSystemButton } from "./delete-button";
+import { ShareLinkForm } from "./share-link-form";
+import { RevokeShareLinkButton } from "./revoke-share-link-button";
 import { getCurrentUser } from "@/lib/current-user";
 import { canManageSystem, canDecideStage, canCreateSystem } from "@/lib/permissions";
 
@@ -73,6 +75,10 @@ export default async function SystemDetailPage({
       },
       vendor: true,
       changeEvents: { orderBy: { occurredAt: "desc" }, take: 1 },
+      shareLinks: {
+        orderBy: { createdAt: "desc" },
+        include: { _count: { select: { views: true } } },
+      },
     },
   });
 
@@ -589,6 +595,44 @@ export default async function SystemDetailPage({
           Full governance report (PDF)
         </a>
       </div>
+
+      {canManage && (
+        <div className="mt-4 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+          <span className="text-xs uppercase tracking-wide text-zinc-500">Share with auditor</span>
+          <ShareLinkForm aiSystemId={system.id} />
+          {system.shareLinks.length > 0 && (
+            <ul className="mt-4 flex flex-col gap-2 text-sm">
+              {system.shareLinks.map((link) => {
+                const isRevoked = !!link.revokedAt;
+                const isExpired = !isRevoked && link.expiresAt < new Date();
+                const status = isRevoked ? "Revoked" : isExpired ? "Expired" : "Active";
+                return (
+                  <li key={link.id} className="flex items-center justify-between gap-2">
+                    <span className="text-zinc-600 dark:text-zinc-400">
+                      {link.tokenPrefix}… · created {link.createdAt.toISOString().slice(0, 10)} ·
+                      expires {link.expiresAt.toISOString().slice(0, 10)} · {link._count.views} view
+                      {link._count.views === 1 ? "" : "s"} ·{" "}
+                      <span
+                        className={
+                          status === "Active"
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-zinc-500"
+                        }
+                      >
+                        {status}
+                      </span>
+                    </span>
+                    {status === "Active" && (
+                      <RevokeShareLinkButton aiSystemId={system.id} shareLinkId={link.id} />
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+
       <ul className="mt-4 flex flex-col gap-2 text-sm">
         {system.auditLog.length === 0 && (
           <li className="text-zinc-500">No activity yet.</li>
