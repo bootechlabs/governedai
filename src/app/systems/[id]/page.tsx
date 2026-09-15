@@ -8,6 +8,7 @@ import {
   GitBranch,
   Paperclip,
   ScrollText,
+  AlertTriangle,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
@@ -28,6 +29,7 @@ import {
 } from "@/lib/badges";
 import { isStageActionable } from "@/lib/workflow";
 import { USE_CASE_TEMPLATE_LABELS, REGULATION_LABELS } from "@/lib/risk-classification";
+import { computeRegulationSectionStatuses } from "@/lib/regulation-sections";
 import { inputClass, primaryButtonClass, subtleLinkClass } from "@/lib/ui";
 import { DeleteSystemButton } from "./delete-button";
 import { getCurrentUser } from "@/lib/current-user";
@@ -67,6 +69,32 @@ export default async function SystemDetailPage({
   const canDecide = canDecideStage(actor.role);
   const canAssessRisk = canCreateSystem(actor.role);
 
+  // Everything a reviewer would otherwise have to read all five sections
+  // to find — built from data already fetched above, no extra queries.
+  const actionItems: string[] = [];
+  if (!isArchived) {
+    if (!system.riskClassification) {
+      actionItems.push("No risk assessment has been run yet");
+    }
+    const pendingStageCount = system.stages.filter((s) => isStageActionable(s.status)).length;
+    if (pendingStageCount > 0) {
+      actionItems.push(
+        `${pendingStageCount} workflow stage${pendingStageCount === 1 ? "" : "s"} awaiting a decision`,
+      );
+    }
+    if (system.riskClassification) {
+      const missingArtifacts = computeRegulationSectionStatuses(
+        system.riskClassification.triggeredRegulations,
+        system.evidence,
+      ).flatMap((section) => section.artifacts.filter((a) => !a.onFile));
+      if (missingArtifacts.length > 0) {
+        actionItems.push(
+          `${missingArtifacts.length} compliance item${missingArtifacts.length === 1 ? "" : "s"} missing evidence`,
+        );
+      }
+    }
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-6 py-12">
       <Link href="/systems/inventory" className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:underline">
@@ -88,6 +116,21 @@ export default async function SystemDetailPage({
         <ClassificationBadge value={system.classification} />
         {!system.vendor && system.vendorName && <span>Vendor: {system.vendorName}</span>}
       </div>
+
+      {actionItems.length > 0 && (
+        <div className="mt-3 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          <div className="flex items-center gap-1.5 font-medium">
+            <AlertTriangle size={14} />
+            Needs attention
+          </div>
+          <ul className="mt-1 list-disc pl-5">
+            {actionItems.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {system.vendor && (
         <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800">
           <Link href={`/systems/vendors/${system.vendor.id}`} className="font-medium underline hover:no-underline">
@@ -279,26 +322,46 @@ export default async function SystemDetailPage({
               </p>
             )}
             {isStageActionable(stage.status) && !isArchived && canDecide ? (
-              <form
-                action={decideStage.bind(null, stage.id)}
-                className="mt-3 flex flex-col gap-2 sm:flex-row"
-              >
-                <select name="status" defaultValue="APPROVED" className={inputClass}>
-                  <option value="IN_REVIEW">Move to in review</option>
-                  <option value="APPROVED">Approve</option>
-                  <option value="CONDITIONALLY_APPROVED">
-                    Conditionally approve
-                  </option>
-                  <option value="REJECTED">Reject</option>
-                </select>
+              <form action={decideStage.bind(null, stage.id)} className="mt-3 flex flex-col gap-2">
                 <input
                   name="rationale"
-                  placeholder="Decision rationale"
-                  className={`flex-1 ${inputClass}`}
+                  placeholder="Decision rationale (required to reject or conditionally approve)"
+                  className={inputClass}
                 />
-                <button type="submit" className={primaryButtonClass}>
-                  Record decision
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="submit"
+                    name="status"
+                    value="APPROVED"
+                    className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="submit"
+                    name="status"
+                    value="CONDITIONALLY_APPROVED"
+                    className="rounded border border-amber-500 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/40"
+                  >
+                    Conditionally approve
+                  </button>
+                  <button
+                    type="submit"
+                    name="status"
+                    value="REJECTED"
+                    className="rounded border border-red-500 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="submit"
+                    name="status"
+                    value="IN_REVIEW"
+                    className="text-sm text-zinc-500 underline hover:no-underline"
+                  >
+                    Move to in review
+                  </button>
+                </div>
               </form>
             ) : null}
           </li>
@@ -370,14 +433,14 @@ export default async function SystemDetailPage({
             className={`inline-flex items-center gap-1.5 ${subtleLinkClass}`}
           >
             <FileSpreadsheet size={14} />
-            Audit log (CSV)
+            Raw audit log (CSV)
           </a>
           <a
             href={`/systems/${system.id}/audit?format=pdf`}
             className={`inline-flex items-center gap-1.5 ${subtleLinkClass}`}
           >
             <FileText size={14} />
-            Full report (PDF)
+            Full governance report (PDF)
           </a>
         </div>
       </div>

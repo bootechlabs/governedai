@@ -99,8 +99,11 @@ export default async function SystemsLayout({
         </div>
       </header>
 
+      {/* Indigo, deliberately outside the red/amber/orange/emerald status
+          vocabulary (see src/lib/badges.tsx) — "I'm impersonating" must
+          never be readable as a risk/status signal. */}
       {user.impersonation && (
-        <div className="flex items-center justify-between gap-3 border-b border-amber-300 bg-amber-50 px-6 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+        <div className="flex items-center justify-between gap-3 border-b border-indigo-300 bg-indigo-50 px-6 py-2 text-sm text-indigo-900 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300">
           <span className="inline-flex items-center gap-1.5">
             <UserCog size={15} />
             Viewing as {user.email} on behalf of {user.impersonation.realAdminEmail} — expires{" "}

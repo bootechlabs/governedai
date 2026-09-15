@@ -1,35 +1,57 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { createAiSystem } from "../actions";
-import { ClassificationBadge, DeploymentStatusBadge, StageStatusBadge } from "@/lib/badges";
+import { ClassificationBadge, DeploymentStatusBadge, StageStatusBadge, RiskTierBadge } from "@/lib/badges";
 import { inputClass, primaryButtonClass, subtleLinkClass } from "@/lib/ui";
 import { getCurrentUser } from "@/lib/current-user";
 import { canCreateSystem } from "@/lib/permissions";
+import type { DeploymentStatus, RiskTier, Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-const gridCols = "grid-cols-[2fr_1fr_1fr_150px_150px_1.8fr]";
+const gridCols = "grid-cols-[2fr_1fr_1fr_150px_150px_150px_1.8fr]";
 const cellClass = "px-3 py-2 flex items-center";
 const cellInputClass = `w-full ${inputClass}`;
 
 export default async function InventoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archived?: string }>;
+  searchParams: Promise<{ archived?: string; status?: string; risk?: string }>;
 }) {
-  const { archived } = await searchParams;
+  const { archived, status, risk } = await searchParams;
   const showArchived = archived === "1";
+  const statusFilter = status as DeploymentStatus | undefined;
+  const riskFilter = risk as RiskTier | undefined;
   const actor = await getCurrentUser();
   const canCreate = canCreateSystem(actor.role);
 
   const orgId = actor.organizationId;
+  const where: Prisma.AiSystemWhereInput = {
+    organizationId: orgId,
+    archivedAt: showArchived ? { not: null } : null,
+    ...(statusFilter ? { deploymentStatus: statusFilter } : {}),
+    ...(riskFilter ? { riskClassification: { riskTier: riskFilter } } : {}),
+  };
+
+  // Preserves whichever filters are active across the archived/active toggle.
+  function toggleArchivedHref() {
+    const params = new URLSearchParams();
+    if (!showArchived) params.set("archived", "1");
+    if (statusFilter) params.set("status", statusFilter);
+    if (riskFilter) params.set("risk", riskFilter);
+    const qs = params.toString();
+    return `/systems/inventory${qs ? `?${qs}` : ""}`;
+  }
+
   const [systems, activeCount, archivedCount, vendors] = await Promise.all([
     prisma.aiSystem.findMany({
-      where: showArchived
-        ? { organizationId: orgId, archivedAt: { not: null } }
-        : { organizationId: orgId, archivedAt: null },
+      where,
       orderBy: { createdAt: "desc" },
-      include: { owner: true, stages: { orderBy: { sequence: "asc" } } },
+      include: {
+        owner: true,
+        stages: { orderBy: { sequence: "asc" } },
+        riskClassification: true,
+      },
     }),
     prisma.aiSystem.count({ where: { organizationId: orgId, archivedAt: null } }),
     prisma.aiSystem.count({ where: { organizationId: orgId, archivedAt: { not: null } } }),
@@ -43,15 +65,17 @@ export default async function InventoryPage({
           {showArchived ? "Archived AI systems" : "AI system inventory"}
         </h1>
         <div className="flex items-center gap-4">
+          {(statusFilter || riskFilter) && (
+            <Link href={showArchived ? "/systems/inventory?archived=1" : "/systems/inventory"} className={subtleLinkClass}>
+              Clear filter
+            </Link>
+          )}
           {canCreate && !showArchived && (
             <Link href="/systems/import" className={subtleLinkClass}>
               Bulk import
             </Link>
           )}
-          <Link
-            href={showArchived ? "/systems/inventory" : "/systems/inventory?archived=1"}
-            className={subtleLinkClass}
-          >
+          <Link href={toggleArchivedHref()} className={subtleLinkClass}>
             {showArchived ? `← Active (${activeCount})` : `Archived (${archivedCount})`}
           </Link>
         </div>
@@ -86,6 +110,9 @@ export default async function InventoryPage({
           </span>
           <span role="columnheader" className={cellClass}>
             Status
+          </span>
+          <span role="columnheader" className={cellClass}>
+            Risk
           </span>
           <span role="columnheader" className={cellClass}>
             Stages
@@ -149,6 +176,9 @@ export default async function InventoryPage({
                 <option value="RETIRED">Retired</option>
               </select>
             </span>
+            <span role="cell" className={`${cellClass} text-xs text-zinc-400`}>
+              —
+            </span>
             <span role="cell" className={cellClass}>
               <button form="new-system-form" type="submit" className={primaryButtonClass}>
                 Add
@@ -199,6 +229,13 @@ export default async function InventoryPage({
             </span>
             <span role="cell" className={cellClass}>
               <DeploymentStatusBadge value={system.deploymentStatus} />
+            </span>
+            <span role="cell" className={cellClass}>
+              {system.riskClassification ? (
+                <RiskTierBadge value={system.riskClassification.riskTier} />
+              ) : (
+                <span className="text-xs text-zinc-400">Not assessed</span>
+              )}
             </span>
             <span role="cell" className={`${cellClass} gap-3`}>
               {system.stages.map((stage, i) => (

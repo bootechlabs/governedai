@@ -31,6 +31,15 @@ import type {
   EvidenceCategory,
 } from "@prisma/client";
 
+// Canonical status color vocabulary — every badge on the app uses one of
+// these, so a color always means the same thing everywhere it appears:
+//   zinc   = neutral / baseline, nothing to note
+//   amber  = early or moderate concern, needs attention soon
+//   orange = high concern (reserved for 4-step severity scales, alongside
+//            zinc/amber/red, so a scale with 4 real levels has 4 real steps)
+//   red    = critical / blocking, needs attention now
+//   emerald = cleared / good / approved
+// Don't introduce a new color for a new badge — map it onto this scale.
 function Badge({
   icon: Icon,
   label,
@@ -53,8 +62,8 @@ export const classificationConfig: Record<
   { icon: LucideIcon; label: string; colorClass: string }
 > = {
   PUBLIC: { icon: Globe, label: "Public", colorClass: "text-zinc-500" },
-  INTERNAL: { icon: Building2, label: "Internal", colorClass: "text-blue-600 dark:text-blue-400" },
-  CONFIDENTIAL: { icon: Lock, label: "Confidential", colorClass: "text-amber-600 dark:text-amber-400" },
+  INTERNAL: { icon: Building2, label: "Internal", colorClass: "text-amber-600 dark:text-amber-400" },
+  CONFIDENTIAL: { icon: Lock, label: "Confidential", colorClass: "text-orange-600 dark:text-orange-400" },
   RESTRICTED: { icon: ShieldAlert, label: "Restricted", colorClass: "text-red-600 dark:text-red-400" },
 };
 

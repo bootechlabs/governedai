@@ -147,6 +147,12 @@ export async function decideStage(stageId: string, formData: FormData) {
   if (!status) {
     throw new Error("Status is required");
   }
+  // A rejection or a conditional approval without a rationale is an
+  // incomplete audit trail the moment it's recorded — enforced here,
+  // not left to be caught later in review.
+  if ((status === "REJECTED" || status === "CONDITIONALLY_APPROVED") && !rationale) {
+    throw new Error("A rationale is required to reject or conditionally approve a stage");
+  }
 
   const actor = await getCurrentUser();
   if (!canDecideStage(actor.role)) {
