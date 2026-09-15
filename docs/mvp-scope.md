@@ -60,7 +60,7 @@ EasyAudit competes on generic compliance-framework breadth, not AI-specific gove
 - Deep third-party integrations (Jira, Google Workspace/M365, EHR systems) — fast-follows once real usage shows which one matters.
 - Self-serve signup, billing, plan tiers — org creation stays admin/seed-provisioned for now.
 - Configurable/custom workflow builder — stage shape is fixed, content (names/criteria) is data.
-- Email/Slack/notification integrations — the one exception is the impersonation-notice email, a support/security control, not a product notification system.
+- Email/Slack/notification integrations — the exceptions are the impersonation-notice email and (once slice 10 ships) an internal vendor-reattestation-due reminder, both support/operational controls, not a product notification system.
 - Mobile app — responsive web only.
 
 ## Core entities (as built)
@@ -107,6 +107,25 @@ Dashboard (`/systems`), inventory (`/systems/inventory`), system detail (record 
 - Lightweight shadow-AI self-report intake — not technical agent/SaaS discovery (Zenity/Darktrace's lane), but a department-by-department survey feeding the AiSystem entity (bulk CSV/Excel import for this already exists).
 - One real third-party integration, prioritized by whatever blocks the first few real users — likely a vendor-list/GRC-tool export before Jira or an EHR system.
 
+## Differentiation roadmap — v1.1+ (regulatory/accreditation-driven, added 2026-09-15)
+
+Three mid-2026 regulatory/accreditation developments sharpen the existing wedge (vendor-AI-first, healthcare-specific, state-law-aware, mid-market-operable) and are concrete enough to scope as build slices, continuing the numbering from the original six. None push into the deferred lanes above (runtime enforcement, framework-breadth-chasing) — they extend the existing risk-classification/evidence/report machinery rather than adding new product categories.
+
+**Slice 7 — Payer/UM human-review compliance tracking.** Seven states passed AI-specific health insurance laws in 2026 converging on one pattern: an AI system can't be the sole basis for a coverage denial/downcode/adverse determination — a licensed human must review it, several require disclosure. Alabama SB 63 (eff. Oct. 1, 2026), Colorado HB 1139 (eff. Jan. 1, 2027, also bars AI-delivered psychotherapy coverage + periodic accuracy audits), Georgia SB 444 (eff. Jan. 1, 2027), Illinois SB 3114 (eff. Jan. 1, 2028, bans automated claim downcoding without human review), Iowa HF 2635, Utah SB 319 (eff. Jan. 1, 2027, public disclosure of prior-auth data/AI usage), Washington SB 5395 (eff. June 11, 2026) — [Becker's Payer Issues](https://www.beckerspayer.com/policy-updates/7-ai-health-insurance-state-laws-passed-in-2026/).
+- New reference table `StateHealthAiLaw` (state, bill number, requirement summary, effective date, applies_to, source URL), seeded with the seven above.
+- New `AiSystem.statesDeployed` (multi-select) — applicability depends on where the customer operates, not just the use-case template.
+- New intake question on the prior-auth/UM and RCM/billing templates: human-review-before-finalization (yes/no + evidence prompt).
+- Risk classification: `statesDeployed` ∩ `StateHealthAiLaw` (matched to use-case template) adds matched law(s) to `triggeredRegulations`.
+- Report export: extend the existing per-regulation checklist mechanism to check the human-review answer against attached evidence per triggered state law.
+
+**Slice 8 — CHAI risk-categorization alignment.** CHAI (Coalition for Health AI, the group the Joint Commission partnered with on 2025 AI adoption guidance) publishes a Risk Categorization Tool v3: low/medium/high across Life & Patient Safety and Technology & Data, mapped to NIST AI RMF/EU AI Act — [CHAI: Risk Categorization Tool v3](https://www.chai.org/blog/coalition-for-health-ai-chai-releases-version-3-of-its-risk-categorization). Low lift: `chaiLifeSafetyTier`/`chaiTechDataTier` on `RiskClassification` from 2-4 extra intake questions per domain, a secondary badge pair on system detail/inventory, a "CHAI Risk Categorization (v3)" PDF section.
+
+**Slice 9 — Auditor-facing read-only share link.** New `ShareLink` entity (token, expires_at, revoked_at) backing an unauthenticated `/share/[token]` route rendering the same content as the PDF report, with a visible "shared audit view" banner. Each view logs an `AuditLogEntry` (timestamp + viewer IP, no identity). "Share with auditor" action on system detail: pick expiration (7/30/90 days), generate/copy, list active links with one-click revoke. A live, time-boxed, audit-logged link is closer to what an actual auditor/counterparty security team wants than a static PDF attachment.
+
+**Slice 10 — Vendor re-attestation reminder.** `Vendor.lastAttestedAt` + `attestationCadenceDays` (default 365). Extend the existing vendor-BAA-attention dashboard widget to also flag vendors past due. Reuse the Resend channel for an internal reminder to the org's admin(s) — vendor-facing outreach (asking the vendor to re-attest) is a bigger scope decision, deliberately out of this slice. Turns the vendor registry into an ongoing relationship without needing full Change Event automation (already shipped, so this is now easier than originally scoped — could piggyback on `ChangeEvent` infra if useful).
+
+**Not yet scoped — needs research first:** Joint Commission "Responsible Use of AI in Healthcare Certification" (launched May 2026, building on Joint Commission/CHAI joint guidance) — potentially the highest-leverage item here since it's an accreditation body rather than a state law, but the certification's actual scoring criteria haven't been pulled yet. Research the real criteria before scoping as a slice.
+
 ## Definition of done for MVP
 
 - 1–5 users can log in, register real AI systems, run at least one through a use-case-specific (or generic) intake questionnaire producing a risk classification, move it through the workflow with a recorded decision, attach at least one real piece of tagged evidence, and export a report — including a law-specific compliance checklist where triggered — credible enough to hand to an actual auditor. **Met.**
@@ -115,7 +134,8 @@ Dashboard (`/systems`), inventory (`/systems/inventory`), system detail (record 
 
 ## Open questions
 
-- When to move Stytch from Test to Live environment — before the first real (non-Bootech) org is provisioned, at the latest.
+- When to move Stytch from Test to Live environment — deliberately deferred (2026-09-15), before the first real (non-Bootech) org is provisioned, at the latest.
 - Per-org SSO hasn't been tested against a real IdP yet.
-- Resend account/domain verification not yet set up — impersonation emails currently no-op.
 - Whether risk classification should gate workflow stage requirements (e.g., a higher-risk system needing an extra review stage) — not decided yet.
+- Need to pull the Joint Commission AI certification's actual scoring criteria before scoping a certification-readiness feature (see Differentiation roadmap above).
+- Whether vendor re-attestation (slice 10) should eventually become vendor-facing (an outreach/portal flow) rather than just an internal reminder — deliberately deferred, not decided against.
