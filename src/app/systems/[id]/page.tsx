@@ -182,52 +182,98 @@ export default async function SystemDetailPage({
           ) : (
             <form
               action={updateAiSystem.bind(null, system.id)}
-              className="flex flex-col gap-3"
+              className="flex flex-col gap-4"
             >
-              <input name="name" defaultValue={system.name} required className={inputClass} />
-              <textarea
-                name="description"
-                defaultValue={system.description ?? ""}
-                placeholder="Description"
-                className={inputClass}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  name="businessUnit"
-                  defaultValue={system.businessUnit ?? ""}
-                  placeholder="Business unit"
-                  className={inputClass}
-                />
-                <input
-                  name="vendorName"
-                  defaultValue={system.vendorName ?? ""}
-                  placeholder="Vendor"
-                  list="vendor-names"
-                  className={inputClass}
-                />
+              <div className="flex flex-col gap-3">
+                <span className="text-xs uppercase tracking-wide text-zinc-500">Basic info</span>
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="edit-name" className="text-xs text-zinc-500">
+                    Name
+                  </label>
+                  <input
+                    id="edit-name"
+                    name="name"
+                    defaultValue={system.name}
+                    required
+                    className={inputClass}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="edit-description" className="text-xs text-zinc-500">
+                    Description
+                  </label>
+                  <textarea
+                    id="edit-description"
+                    name="description"
+                    defaultValue={system.description ?? ""}
+                    className={inputClass}
+                  />
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <select
-                  name="classification"
-                  defaultValue={system.classification}
-                  className={inputClass}
-                >
-                  <option value="PUBLIC">Public</option>
-                  <option value="INTERNAL">Internal</option>
-                  <option value="CONFIDENTIAL">Confidential</option>
-                  <option value="RESTRICTED">Restricted</option>
-                </select>
-                <select
-                  name="deploymentStatus"
-                  defaultValue={system.deploymentStatus}
-                  className={inputClass}
-                >
-                  <option value="PLANNED">Planned</option>
-                  <option value="PILOT">Pilot</option>
-                  <option value="PRODUCTION">Production</option>
-                  <option value="RETIRED">Retired</option>
-                </select>
+
+              <div className="flex flex-col gap-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                <span className="text-xs uppercase tracking-wide text-zinc-500">Classification</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="edit-businessUnit" className="text-xs text-zinc-500">
+                      Business unit
+                    </label>
+                    <input
+                      id="edit-businessUnit"
+                      name="businessUnit"
+                      defaultValue={system.businessUnit ?? ""}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="edit-vendorName" className="text-xs text-zinc-500">
+                      Vendor
+                    </label>
+                    <input
+                      id="edit-vendorName"
+                      name="vendorName"
+                      defaultValue={system.vendorName ?? ""}
+                      list="vendor-names"
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="edit-classification" className="text-xs text-zinc-500">
+                      Data classification
+                    </label>
+                    <select
+                      id="edit-classification"
+                      name="classification"
+                      defaultValue={system.classification}
+                      className={inputClass}
+                    >
+                      <option value="PUBLIC">Public</option>
+                      <option value="INTERNAL">Internal</option>
+                      <option value="CONFIDENTIAL">Confidential</option>
+                      <option value="RESTRICTED">Restricted</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="edit-deploymentStatus" className="text-xs text-zinc-500">
+                      Deployment status
+                    </label>
+                    <select
+                      id="edit-deploymentStatus"
+                      name="deploymentStatus"
+                      defaultValue={system.deploymentStatus}
+                      className={inputClass}
+                    >
+                      <option value="PLANNED">Planned</option>
+                      <option value="PILOT">Pilot</option>
+                      <option value="PRODUCTION">Production</option>
+                      <option value="RETIRED">Retired</option>
+                    </select>
+                  </div>
+                </div>
               </div>
+
               <button type="submit" className={`self-start ${primaryButtonClass}`}>
                 Save changes
               </button>

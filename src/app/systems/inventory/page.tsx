@@ -14,15 +14,47 @@ const gridCols = "grid-cols-[2fr_1fr_1fr_150px_150px_150px_1.8fr]";
 const cellClass = "px-3 py-2 flex items-center";
 const cellInputClass = `w-full ${inputClass}`;
 
+type SortKey = "name" | "businessUnit" | "vendorName" | "classification" | "deploymentStatus" | "riskTier";
+type SortDir = "asc" | "desc";
+
+const SORT_KEYS: SortKey[] = [
+  "name",
+  "businessUnit",
+  "vendorName",
+  "classification",
+  "deploymentStatus",
+  "riskTier",
+];
+
+const SORT_LABELS: Record<SortKey, string> = {
+  name: "Name",
+  businessUnit: "Business unit",
+  vendorName: "Vendor",
+  classification: "Classification",
+  deploymentStatus: "Status",
+  riskTier: "Risk",
+};
+
+// Each enum below is declared in Prisma in ramp order (e.g. PUBLIC → RESTRICTED,
+// LOW → CRITICAL), so a plain asc/desc sort already reads as "least → most
+// sensitive/advanced/risky" — no custom comparator needed.
+function buildOrderBy(sort: SortKey | null, dir: SortDir): Prisma.AiSystemOrderByWithRelationInput {
+  if (!sort) return { createdAt: "desc" };
+  if (sort === "riskTier") return { riskClassification: { riskTier: dir } };
+  return { [sort]: dir };
+}
+
 export default async function InventoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archived?: string; status?: string; risk?: string }>;
+  searchParams: Promise<{ archived?: string; status?: string; risk?: string; sort?: string; dir?: string }>;
 }) {
-  const { archived, status, risk } = await searchParams;
+  const { archived, status, risk, sort, dir } = await searchParams;
   const showArchived = archived === "1";
   const statusFilter = status as DeploymentStatus | undefined;
   const riskFilter = risk as RiskTier | undefined;
+  const sortField = SORT_KEYS.includes(sort as SortKey) ? (sort as SortKey) : null;
+  const sortDir: SortDir = dir === "asc" ? "asc" : "desc";
   const actor = await getCurrentUser();
   const canCreate = canCreateSystem(actor.role);
 
@@ -34,20 +66,37 @@ export default async function InventoryPage({
     ...(riskFilter ? { riskClassification: { riskTier: riskFilter } } : {}),
   };
 
-  // Preserves whichever filters are active across the archived/active toggle.
+  // Preserves whichever filters/sort are active across the archived/active toggle.
   function toggleArchivedHref() {
     const params = new URLSearchParams();
     if (!showArchived) params.set("archived", "1");
     if (statusFilter) params.set("status", statusFilter);
     if (riskFilter) params.set("risk", riskFilter);
+    if (sortField) {
+      params.set("sort", sortField);
+      params.set("dir", sortDir);
+    }
     const qs = params.toString();
     return `/systems/inventory${qs ? `?${qs}` : ""}`;
+  }
+
+  // Clicking a header sorts by it ascending; clicking the already-active
+  // column flips direction. Other filters/the archived toggle carry over.
+  function sortHref(field: SortKey) {
+    const params = new URLSearchParams();
+    if (showArchived) params.set("archived", "1");
+    if (statusFilter) params.set("status", statusFilter);
+    if (riskFilter) params.set("risk", riskFilter);
+    const nextDir: SortDir = sortField === field && sortDir === "asc" ? "desc" : "asc";
+    params.set("sort", field);
+    params.set("dir", nextDir);
+    return `/systems/inventory?${params.toString()}`;
   }
 
   const [systems, activeCount, archivedCount, vendors] = await Promise.all([
     prisma.aiSystem.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: buildOrderBy(sortField, sortDir),
       include: {
         owner: true,
         stages: { orderBy: { sequence: "asc" } },
@@ -117,24 +166,17 @@ export default async function InventoryPage({
           role="row"
           className={`grid ${gridCols} border-b border-zinc-200 text-left text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800`}
         >
-          <span role="columnheader" className={cellClass}>
-            Name
-          </span>
-          <span role="columnheader" className={cellClass}>
-            Business unit
-          </span>
-          <span role="columnheader" className={cellClass}>
-            Vendor
-          </span>
-          <span role="columnheader" className={cellClass}>
-            Classification
-          </span>
-          <span role="columnheader" className={cellClass}>
-            Status
-          </span>
-          <span role="columnheader" className={cellClass}>
-            Risk
-          </span>
+          {SORT_KEYS.map((key) => (
+            <Link
+              key={key}
+              href={sortHref(key)}
+              role="columnheader"
+              className={`${cellClass} hover:text-zinc-700 dark:hover:text-zinc-300`}
+            >
+              {SORT_LABELS[key]}
+              {sortField === key && <span className="ml-1">{sortDir === "asc" ? "▲" : "▼"}</span>}
+            </Link>
+          ))}
           <span role="columnheader" className={cellClass}>
             Stages
           </span>

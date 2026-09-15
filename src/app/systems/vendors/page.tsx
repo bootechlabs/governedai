@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Building2 } from "lucide-react";
+import { ArrowLeft, Building2, Check } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import { canManageVendors } from "@/lib/permissions";
@@ -10,7 +10,7 @@ import { createVendor } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-const gridCols = "grid-cols-[2fr_1.5fr_1fr_100px]";
+const gridCols = "grid-cols-[2fr_1.3fr_1.4fr_1fr_100px]";
 const cellClass = "px-3 py-2 flex items-center text-xs";
 
 const baaStatusOptions = [
@@ -58,6 +58,7 @@ export default async function VendorsPage() {
         >
           <span role="columnheader" className={cellClass}>Name</span>
           <span role="columnheader" className={cellClass}>BAA status</span>
+          <span role="columnheader" className={cellClass}>Docs</span>
           <span role="columnheader" className={cellClass}>Linked systems</span>
           <span role="columnheader" className={cellClass}></span>
         </div>
@@ -85,6 +86,7 @@ export default async function VendorsPage() {
             </select>
           </span>
           <span role="cell" className={cellClass}></span>
+          <span role="cell" className={cellClass}></span>
           <span role="cell" className={cellClass}>
             <button form="add-vendor-form" type="submit" className={primaryButtonClass}>
               Add
@@ -108,6 +110,29 @@ export default async function VendorsPage() {
             <span role="cell" className={`${cellClass} font-medium`}>{vendor.name}</span>
             <span role="cell" className={cellClass}>
               <BaaStatusBadge value={vendor.baaStatus} />
+            </span>
+            <span role="cell" className={`${cellClass} flex-col items-start gap-0.5 py-2 text-zinc-500`}>
+              <span className="flex items-center gap-1">
+                {vendor.soc2ReportUrl ? (
+                  <Check size={12} className="text-emerald-600 dark:text-emerald-500" />
+                ) : (
+                  <span className="text-zinc-300 dark:text-zinc-600">—</span>
+                )}
+                SOC 2
+              </span>
+              <span className="flex items-center gap-1">
+                {vendor.modelCardUrl ? (
+                  <Check size={12} className="text-emerald-600 dark:text-emerald-500" />
+                ) : (
+                  <span className="text-zinc-300 dark:text-zinc-600">—</span>
+                )}
+                Model card
+              </span>
+              {vendor.subprocessors.length > 0 && (
+                <span>
+                  {vendor.subprocessors.length} subprocessor{vendor.subprocessors.length === 1 ? "" : "s"}
+                </span>
+              )}
             </span>
             <span role="cell" className={`${cellClass} text-zinc-500`}>{vendor._count.aiSystems}</span>
             <span role="cell" className={cellClass}></span>

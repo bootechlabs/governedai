@@ -87,9 +87,14 @@ export default async function RiskAssessmentPage({
 
       <form action={submitRiskAssessment.bind(null, system.id)} className="mt-6 flex flex-col gap-8">
         <input type="hidden" name="template" value={template} />
-        {questions.map((question) => (
+        {questions.map((question, i) => (
           <fieldset key={question.key}>
-            <legend className="text-sm font-medium">{question.text}</legend>
+            <legend className="text-sm font-medium">
+              <span className="block text-xs font-normal uppercase tracking-wide text-zinc-500">
+                Question {i + 1} of {questions.length}
+              </span>
+              {question.text}
+            </legend>
             <div className="mt-3 flex flex-col gap-2">
               {question.options.map((option, i) => (
                 <label
