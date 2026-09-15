@@ -25,9 +25,6 @@ Live at app.governedai.co (Vercel), real org (Bootech) provisioned.
 - **Root error boundary**: every thrown Server Action error (all deliberately user-facing in this codebase) now renders as a real message instead of a blank crash screen.
 - **Portfolio-level report export**: `/systems/portfolio-report?format=csv|pdf` — CSV is one row per active system (risk tier, triggered regulations, missing-evidence count); PDF is an aggregate summary (risk-tier breakdown) plus a compact block per system, entry points on `/systems/inventory`.
 
-**Not yet built:**
-- Resend domain verification (impersonation email currently no-ops).
-
 **Deliberately deferred:**
 - Stytch Live environment cutover (still on Test) — decision 2026-09-15: stay on Test until the product is more complete rather than cut over now. Functionally identical (real emails, real sessions), so this is a later infra task, not a blocker.
 
@@ -99,7 +96,7 @@ Dashboard (`/systems`), inventory (`/systems/inventory`), system detail (record 
 - **Postgres + Prisma** — Neon in production, local Docker Postgres for dev; migrations tracked in repo.
 - **Auth**: Stytch B2B — magic link + per-org SSO (SAML/OIDC), multi-org identity. Production currently runs on Stytch's **Test environment** project (not Live) — functionally identical, real emails sent, but a near-term tradeoff to revisit before scaling past the first org.
 - **File storage**: Cloudflare R2 (S3-compatible) for evidence uploads, local-disk fallback for dev.
-- **Email**: Resend, added solely for the impersonation-started notice (not auth — Stytch remains the only auth-email channel). Needs a Resend account + verified sending domain to actually deliver; the code no-ops gracefully without it.
+- **Email**: Resend, added solely for the impersonation-started notice (not auth — Stytch remains the only auth-email channel). Domain verified and `RESEND_API_KEY`/`EMAIL_FROM` set in production as of 2026-09-15 — the no-op fallback still exists for local dev, where those vars aren't set.
 - **Hosting**: Vercel, auto-deploys `main`.
 - **PDF export**: server-side (pdfkit), branded, with per-regulation compliance sections computed from real evidence data.
 - **Testing**: Vitest for units (regulation checklist logic, risk scoring, bulk-import parsing, vendor matching, etc.), Playwright for the auth-gate smoke test.
