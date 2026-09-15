@@ -30,7 +30,7 @@ export default async function DashboardPage() {
     deploymentGroups,
     riskGroups,
     vendorTotal,
-    vendorsNeedingAttention,
+    vendorAttentionRows,
     pendingStages,
     pendingStagesTotal,
     recentActivity,
@@ -43,8 +43,14 @@ export default async function DashboardPage() {
       _count: true,
     }),
     prisma.vendor.count({ where: { organizationId: orgId } }),
-    prisma.vendor.count({
-      where: { organizationId: orgId, baaStatus: { in: ["REQUIRED_NOT_ON_FILE", "EXPIRED"] } },
+    // "Needs attention" has two independent reasons — BAA status, or
+    // re-attestation overdue — and the overdue threshold is per-vendor
+    // (lastAttestedAt + attestationCadenceDays), which Prisma can't express
+    // as a single-column filter. Small per-org vendor counts, so fetch and
+    // compute in JS rather than reach for raw SQL.
+    prisma.vendor.findMany({
+      where: { organizationId: orgId },
+      select: { baaStatus: true, lastAttestedAt: true, attestationCadenceDays: true },
     }),
     prisma.workflowStage.findMany({
       where: { status: { in: ["PENDING", "IN_REVIEW"] }, aiSystem: activeFilter },
@@ -71,6 +77,14 @@ export default async function DashboardPage() {
     number
   >;
   const unclassifiedCount = totalActive - riskGroups.reduce((sum, g) => sum + g._count, 0);
+  const now = new Date();
+  const vendorsNeedingAttention = vendorAttentionRows.filter((v) => {
+    const baaNeedsAttention = v.baaStatus === "REQUIRED_NOT_ON_FILE" || v.baaStatus === "EXPIRED";
+    const reattestationOverdue =
+      v.lastAttestedAt !== null &&
+      v.lastAttestedAt.getTime() + v.attestationCadenceDays * 24 * 60 * 60 * 1000 < now.getTime();
+    return baaNeedsAttention || reattestationOverdue;
+  }).length;
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-12">
@@ -181,7 +195,7 @@ export default async function DashboardPage() {
           <p className="mt-2 text-2xl font-semibold">{vendorTotal}</p>
           {vendorsNeedingAttention > 0 && (
             <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-              {vendorsNeedingAttention} need BAA attention
+              {vendorsNeedingAttention} need attention
             </p>
           )}
           <Link href="/systems/vendors" className={`mt-1 inline-block text-xs ${subtleLinkClass}`}>

@@ -100,7 +100,7 @@ model Organization {
   name      String
   createdAt DateTime @default(now())
 
-  vertical  String?
+  vertical String?
 
   users     User[]
   aiSystems AiSystem[]
@@ -114,15 +114,24 @@ model Organization {
 // one in the org (see src/lib/ai-systems.ts matchVendorByName), so
 // nothing already shipped had to change to benefit from this.
 model Vendor {
-  id            String    @id @default(cuid())
-  name          String
-  baaStatus     BaaStatus @default(REQUIRED_NOT_ON_FILE)
-  subprocessors String[]
-  soc2ReportUrl String?
-  modelCardUrl  String?
-  notes         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                        String    @id @default(cuid())
+  name                      String
+  baaStatus                 BaaStatus @default(REQUIRED_NOT_ON_FILE)
+  subprocessors             String[]
+  soc2ReportUrl             String?
+  modelCardUrl              String?
+  notes                     String?
+  // Re-attestation tracking (slice 10) — lastAttestedAt null means "never
+  // tracked," not "overdue," so shipping this doesn't retroactively flag
+  // every existing vendor. lastReattestationNoticeAt is a sentinel so the
+  // daily cron (src/app/api/cron/vendor-reattestation) emails once per
+  // overdue cycle, not once per day forever — cleared whenever
+  // lastAttestedAt is updated (re-attesting resets the cycle).
+  lastAttestedAt            DateTime?
+  attestationCadenceDays    Int       @default(365)
+  lastReattestationNoticeAt DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId String
@@ -137,30 +146,30 @@ model Vendor {
 // (Stytch doesn't need to know our app-specific RBAC) — set via the admin
 // "Manage users" page, read synchronously by src/lib/permissions.ts.
 model User {
-  id             String       @id
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId String
-  name           String?
-  email          String
-  avatarUrl      String?
-  role           UserRole     @default(CONTRIBUTOR)
+  id              String       @id
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId  String
+  name            String?
+  email           String
+  avatarUrl       String?
+  role            UserRole     @default(CONTRIBUTOR)
   // Orthogonal to `role` — a handful of Bootech staff, not an org-scoped
   // permission. Grants access to /platform (see src/app/platform) and the
   // ability to impersonate any non-platform-admin user. Set directly via
   // prisma/seed.ts or a manual DB update; no in-app UI grants this.
-  isPlatformAdmin Boolean     @default(false)
-  createdAt      DateTime     @default(now())
+  isPlatformAdmin Boolean      @default(false)
+  createdAt       DateTime     @default(now())
 
-  ownedSystems     AiSystem[]      @relation("SystemOwner")
-  ownedStages      WorkflowStage[] @relation("StageOwner")
-  uploadedEvidence EvidenceItem[]  @relation("EvidenceUploader")
-  auditEntries     AuditLogEntry[] @relation("AuditActor")
-  createdApiKeys   ApiKey[]        @relation("ApiKeyCreator")
-  riskClassificationsCompleted RiskClassification[] @relation("RiskClassificationCompleter")
-  impersonationsInitiated ImpersonationSession[] @relation("ImpersonationInitiator")
-  impersonationsReceived  ImpersonationSession[] @relation("ImpersonationTarget")
-  changeEventsRecorded    ChangeEvent[]          @relation("ChangeEventActor")
-  shareLinksCreated       ShareLink[]            @relation("ShareLinkCreator")
+  ownedSystems                 AiSystem[]             @relation("SystemOwner")
+  ownedStages                  WorkflowStage[]        @relation("StageOwner")
+  uploadedEvidence             EvidenceItem[]         @relation("EvidenceUploader")
+  auditEntries                 AuditLogEntry[]        @relation("AuditActor")
+  createdApiKeys               ApiKey[]               @relation("ApiKeyCreator")
+  riskClassificationsCompleted RiskClassification[]   @relation("RiskClassificationCompleter")
+  impersonationsInitiated      ImpersonationSession[] @relation("ImpersonationInitiator")
+  impersonationsReceived       ImpersonationSession[] @relation("ImpersonationTarget")
+  changeEventsRecorded         ChangeEvent[]          @relation("ChangeEventActor")
+  shareLinksCreated            ShareLink[]            @relation("ShareLinkCreator")
 
   @@unique([organizationId, email])
 }
@@ -172,15 +181,15 @@ model User {
 // impersonation lives here plus the impersonation_started/ended
 // AuditLogEntry rows).
 model ImpersonationSession {
-  id         String    @id @default(cuid())
-  startedAt  DateTime  @default(now())
-  expiresAt  DateTime
-  endedAt    DateTime?
+  id        String    @id @default(cuid())
+  startedAt DateTime  @default(now())
+  expiresAt DateTime
+  endedAt   DateTime?
 
-  platformAdmin   User @relation("ImpersonationInitiator", fields: [platformAdminId], references: [id])
+  platformAdmin   User   @relation("ImpersonationInitiator", fields: [platformAdminId], references: [id])
   platformAdminId String
 
-  targetUser   User @relation("ImpersonationTarget", fields: [targetUserId], references: [id])
+  targetUser   User   @relation("ImpersonationTarget", fields: [targetUserId], references: [id])
   targetUserId String
 
   @@index([platformAdminId])
@@ -285,15 +294,15 @@ model ShareLinkView {
 // overwrites this row, with history preserved via a "risk_classified"
 // AuditLogEntry on every run (same pattern as every other mutation).
 model RiskClassification {
-  id              String          @id @default(cuid())
-  useCaseTemplate UseCaseTemplate
-  answers         Json
-  riskTier        RiskTier
+  id                   String          @id @default(cuid())
+  useCaseTemplate      UseCaseTemplate
+  answers              Json
+  riskTier             RiskTier
   // Deprecated as of the dynamic regulation engine (see RegulationDefinition
   // below) — left in place, unused by app code, as a one-release safety net
   // against a backfill mistake rather than dropped immediately.
   triggeredRegulations Regulation[]
-  completedAt          DateTime     @default(now())
+  completedAt          DateTime        @default(now())
 
   aiSystem   AiSystem @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
   aiSystemId String   @unique
@@ -352,7 +361,7 @@ model RegulationArtifactDefinition {
 // replaces RiskClassification.triggeredRegulations (an enum array) now
 // that a regulation is a row, not an enum value.
 model RiskClassificationRegulation {
-  id                   String @id @default(cuid())
+  id String @id @default(cuid())
 
   riskClassification   RiskClassification @relation(fields: [riskClassificationId], references: [id], onDelete: Cascade)
   riskClassificationId String
@@ -409,13 +418,13 @@ model EvidenceItem {
 // org, admin-generated. Only a sha256 hash is stored — the plaintext key
 // is shown once at creation and never persisted, same as a password.
 model ApiKey {
-  id        String   @id @default(cuid())
-  name      String
-  keyPrefix String
-  keyHash   String   @unique
-  createdAt DateTime @default(now())
+  id         String    @id @default(cuid())
+  name       String
+  keyPrefix  String
+  keyHash    String    @unique
+  createdAt  DateTime  @default(now())
   lastUsedAt DateTime?
-  revokedAt DateTime?
+  revokedAt  DateTime?
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId String

@@ -44,13 +44,17 @@ export async function updateVendor(vendorId: string, formData: FormData) {
   const soc2ReportUrl = String(formData.get("soc2ReportUrl") ?? "").trim() || null;
   const modelCardUrl = String(formData.get("modelCardUrl") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
+  const attestationCadenceDays = Number(formData.get("attestationCadenceDays") ?? 365);
   if (!name) {
     throw new Error("Name is required");
+  }
+  if (!Number.isInteger(attestationCadenceDays) || attestationCadenceDays < 1) {
+    throw new Error("Attestation cadence must be a whole number of days, at least 1");
   }
 
   const { count } = await prisma.vendor.updateMany({
     where: { id: vendorId, organizationId: actor.organizationId },
-    data: { name, baaStatus, subprocessors, soc2ReportUrl, modelCardUrl, notes },
+    data: { name, baaStatus, subprocessors, soc2ReportUrl, modelCardUrl, notes, attestationCadenceDays },
   });
   if (count === 0) {
     throw new Error("Vendor not found in your organization");
@@ -58,6 +62,24 @@ export async function updateVendor(vendorId: string, formData: FormData) {
 
   revalidatePath("/systems/vendors");
   revalidatePath(`/systems/vendors/${vendorId}`);
+}
+
+// One-click instead of a raw date input — matches how workflow decisions
+// are also single-button actions rather than manual data entry. Resets
+// lastReattestationNoticeAt so the next overdue cycle can notify again.
+export async function markVendorReattested(vendorId: string) {
+  const actor = await requireAdmin();
+  const { count } = await prisma.vendor.updateMany({
+    where: { id: vendorId, organizationId: actor.organizationId },
+    data: { lastAttestedAt: new Date(), lastReattestationNoticeAt: null },
+  });
+  if (count === 0) {
+    throw new Error("Vendor not found in your organization");
+  }
+
+  revalidatePath("/systems/vendors");
+  revalidatePath(`/systems/vendors/${vendorId}`);
+  revalidatePath("/systems");
 }
 
 export async function deleteVendor(vendorId: string) {

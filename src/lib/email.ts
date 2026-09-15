@@ -32,3 +32,32 @@ export async function sendImpersonationStartedEmail(params: {
     ].join("\n"),
   });
 }
+
+// Internal nudge only — sent to the org's own admins, not the vendor.
+// Vendor-facing re-attestation outreach is a bigger scope decision,
+// deliberately out of this slice. One email per org per overdue cycle
+// (the cron caller controls that cadence, not this function).
+export async function sendVendorReattestationDueEmail(params: {
+  to: string[];
+  organizationName: string;
+  vendorNames: string[];
+  vendorsUrl: string;
+}) {
+  if (!resend || params.to.length === 0) {
+    if (!resend) console.warn("RESEND_API_KEY not set — skipping vendor re-attestation email");
+    return;
+  }
+
+  await resend.emails.send({
+    from: process.env.EMAIL_FROM ?? "GovernedAI <notifications@governedai.co>",
+    to: params.to,
+    subject: `Vendor re-attestation due — ${params.organizationName}`,
+    text: [
+      `The following vendor${params.vendorNames.length === 1 ? " is" : "s are"} past due for re-attestation in your GovernedAI vendor registry:`,
+      "",
+      ...params.vendorNames.map((name) => `- ${name}`),
+      "",
+      `Review and mark them re-attested: ${params.vendorsUrl}`,
+    ].join("\n"),
+  });
+}

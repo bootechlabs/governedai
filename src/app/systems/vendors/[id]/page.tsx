@@ -4,8 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import { canManageVendors } from "@/lib/permissions";
-import { inputClass, primaryButtonClass } from "@/lib/ui";
-import { updateVendor } from "../actions";
+import { inputClass, primaryButtonClass, subtleLinkClass } from "@/lib/ui";
+import { updateVendor, markVendorReattested } from "../actions";
 import { DeleteVendorButton } from "../delete-vendor-button";
 
 export const dynamic = "force-dynamic";
@@ -83,10 +83,32 @@ export default async function VendorDetailPage({
         <label className="text-xs font-medium text-zinc-500">Notes</label>
         <textarea name="notes" defaultValue={vendor.notes ?? ""} rows={3} className={inputClass} />
 
+        <label className="text-xs font-medium text-zinc-500">Re-attestation cadence (days)</label>
+        <input
+          name="attestationCadenceDays"
+          type="number"
+          min={1}
+          defaultValue={vendor.attestationCadenceDays}
+          className={inputClass}
+        />
+
         <button type="submit" className={`self-start ${primaryButtonClass}`}>
           Save changes
         </button>
       </form>
+
+      <div className="mt-6 flex items-center justify-between rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800">
+        <span className="text-zinc-600 dark:text-zinc-400">
+          {vendor.lastAttestedAt
+            ? `Last re-attested ${vendor.lastAttestedAt.toISOString().slice(0, 10)}`
+            : "Not yet tracked"}
+        </span>
+        <form action={markVendorReattested.bind(null, vendor.id)}>
+          <button type="submit" className={subtleLinkClass}>
+            Mark re-attested today
+          </button>
+        </form>
+      </div>
 
       <h2 className="mt-10 text-lg font-medium">Linked AI systems</h2>
       <ul className="mt-3 flex flex-col gap-1 text-sm">
