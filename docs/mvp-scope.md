@@ -25,8 +25,10 @@ Live at app.governedai.co (Vercel), real org (Bootech) provisioned.
 - **Portfolio-level report export**: `/systems/portfolio-report?format=csv|pdf` — CSV is one row per active system (risk tier, triggered regulations, missing-evidence count); PDF is an aggregate summary (risk-tier breakdown) plus a compact block per system, entry points on `/systems/inventory`.
 
 **Not yet built:**
-- Stytch Live environment cutover (still on Test).
 - Resend domain verification (impersonation email currently no-ops).
+
+**Deliberately deferred:**
+- Stytch Live environment cutover (still on Test) — decision 2026-09-15: stay on Test until the product is more complete rather than cut over now. Functionally identical (real emails, real sessions), so this is a later infra task, not a blocker.
 
 ## Reconciliation note
 
