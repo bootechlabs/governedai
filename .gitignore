@@ -34,8 +34,9 @@ coverage/
 *.tsbuildinfo
 next-env.d.ts
 
-# Local dev fallback for evidence uploads (no R2 configured)
+# Local dev fallback for file uploads (no R2 configured)
 /public/evidence-uploads/
+/public/avatar-uploads/
 
 # Test output
 /test-results/

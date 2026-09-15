@@ -142,6 +142,7 @@ model User {
   organizationId String
   name           String?
   email          String
+  avatarUrl      String?
   role           UserRole     @default(CONTRIBUTOR)
   // Orthogonal to `role` — a handful of Bootech staff, not an org-scoped
   // permission. Grants access to /platform (see src/app/platform) and the

@@ -8,16 +8,15 @@ const r2Configured =
   !!process.env.R2_SECRET_ACCESS_KEY &&
   !!process.env.R2_BUCKET_NAME;
 
-// Dev fallback lives under public/ so Next serves it directly with no
-// extra route — gitignored, not meant to survive past a local session.
-const DEV_UPLOAD_DIR = path.join(process.cwd(), "public", "evidence-uploads");
-
 function safeFileName(originalName: string) {
   const ext = path.extname(originalName).slice(0, 10);
   return `${randomUUID()}${ext}`;
 }
 
-export async function uploadEvidenceFile(file: File): Promise<string> {
+// Shared upload path for both evidence files and profile pictures — R2
+// keys are flat/randomized either way, so the only thing that varies is
+// which folder the local dev fallback (no R2 credentials) writes under.
+async function uploadFile(file: File, devSubdir: string): Promise<string> {
   const fileName = safeFileName(file.name);
   const bytes = Buffer.from(await file.arrayBuffer());
 
@@ -50,8 +49,19 @@ export async function uploadEvidenceFile(file: File): Promise<string> {
     return `${publicBase.replace(/\/$/, "")}/${fileName}`;
   }
 
-  // Local dev fallback — no R2 credentials.
-  await mkdir(DEV_UPLOAD_DIR, { recursive: true });
-  await writeFile(path.join(DEV_UPLOAD_DIR, fileName), bytes);
-  return `/evidence-uploads/${fileName}`;
+  // Local dev fallback — no R2 credentials. Lives under public/ so Next
+  // serves it directly with no extra route — gitignored, not meant to
+  // survive past a local session.
+  const devDir = path.join(process.cwd(), "public", devSubdir);
+  await mkdir(devDir, { recursive: true });
+  await writeFile(path.join(devDir, fileName), bytes);
+  return `/${devSubdir}/${fileName}`;
+}
+
+export function uploadEvidenceFile(file: File): Promise<string> {
+  return uploadFile(file, "evidence-uploads");
+}
+
+export function uploadAvatarFile(file: File): Promise<string> {
+  return uploadFile(file, "avatar-uploads");
 }

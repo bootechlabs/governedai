@@ -12,6 +12,7 @@ import {
   UserCog,
 } from "lucide-react";
 import { getCurrentUserOrNull } from "@/lib/current-user";
+import { Avatar } from "@/lib/avatar";
 import { canManageUsers, canManageSso, canManageApiKeys, canManageVendors } from "@/lib/permissions";
 import { getSessionCookie, clearSessionCookie } from "@/lib/session";
 import { endImpersonation, clearImpersonationCookie } from "@/lib/impersonation";
@@ -73,9 +74,11 @@ export default async function SystemsLayout({
             <CircleQuestionMark size={15} />
             Legend
           </Link>
-          <span>
-            {user.email} · {user.role}
-          </span>
+          {/* Avatar's own title attribute (name/email) shows on hover —
+              role is one click away on the profile page itself. */}
+          <Link href="/systems/profile">
+            <Avatar user={user} />
+          </Link>
           <form
             action={async () => {
               "use server";

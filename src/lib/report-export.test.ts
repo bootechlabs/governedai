@@ -8,6 +8,7 @@ function fakeUser(overrides: Partial<User> = {}): User {
     organizationId: "org_1",
     name: "Test User",
     email: "test@example.com",
+    avatarUrl: null,
     role: "ADMIN",
     isPlatformAdmin: false,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
