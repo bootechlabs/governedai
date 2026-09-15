@@ -2,7 +2,7 @@
 
 Companion to `solo-founder-execution-plan.md`. This doc merges two things that drifted apart: what's actually been built in Claude Code CLI (`~/Projects/work/governedai`), and the v0.1 scope/competitive-positioning doc from the Cowork planning session (`claude/mvp-scope.md` in the claude.ai Project) — see "Reconciliation note" below for how the two were merged.
 
-## Status — 2026-09-14
+## Status — 2026-09-15
 
 Live at app.governedai.co (Vercel), real org (Bootech) provisioned.
 
@@ -22,9 +22,9 @@ Live at app.governedai.co (Vercel), real org (Bootech) provisioned.
 - **UI/UX pass 1**: consistent status-color vocabulary, an action-summary callout on system detail, distinct-weighted review/approval buttons with a server-enforced rationale requirement, dashboard hierarchy + filtered inventory links, self-service profile pictures.
 - **Change events + recertification** (slice 6): a `ChangeEvent` per governance-relevant field edit (vendor, classification, deployment status, business unit); recertification need is computed (not a stored flag) from whether a change is newer than the last stage decision, and re-opens the decision form on already-decided stages without resetting their status.
 - **Root error boundary**: every thrown Server Action error (all deliberately user-facing in this codebase) now renders as a real message instead of a blank crash screen.
+- **Portfolio-level report export**: `/systems/portfolio-report?format=csv|pdf` — CSV is one row per active system (risk tier, triggered regulations, missing-evidence count); PDF is an aggregate summary (risk-tier breakdown) plus a compact block per system, entry points on `/systems/inventory`.
 
 **Not yet built:**
-- Portfolio-level report export (system-level is done).
 - Update/delete on the public API.
 - Stytch Live environment cutover (still on Test).
 - Resend domain verification (impersonation email currently no-ops).
@@ -89,9 +89,7 @@ Every state change in 1–4 writes an audit log entry, which is what makes 5 pos
 
 ## Screens (as built)
 
-Dashboard (`/systems`), inventory (`/systems/inventory`), system detail (record + risk classification + workflow + evidence + audit trail, one page), add/edit system form, intake questionnaire, review/approval action (on system detail), report export (CSV/PDF), vendor registry + detail, users/SSO/API-keys admin pages, icon legend, platform global dashboard + per-org support view.
-
-Not yet built: portfolio-level export.
+Dashboard (`/systems`), inventory (`/systems/inventory`), system detail (record + risk classification + workflow + evidence + audit trail, one page), add/edit system form, intake questionnaire, review/approval action (on system detail), report export (CSV/PDF, system-level and portfolio-level), vendor registry + detail, users/SSO/API-keys admin pages, icon legend, platform global dashboard + per-org support view.
 
 ## Stack (as built)
 
@@ -108,7 +106,6 @@ Not yet built: portfolio-level export.
 
 - Lightweight shadow-AI self-report intake — not technical agent/SaaS discovery (Zenity/Darktrace's lane), but a department-by-department survey feeding the AiSystem entity (bulk CSV/Excel import for this already exists).
 - One real third-party integration, prioritized by whatever blocks the first few real users — likely a vendor-list/GRC-tool export before Jira or an EHR system.
-- Portfolio-level report export.
 
 ## Definition of done for MVP
 
