@@ -24,3 +24,13 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Chrome's native date-picker icon renders dark by default, near-invisible
+   against this app's dark input backgrounds (zinc-900). Same
+   prefers-color-scheme trigger as the dark palette above, not a manual
+   toggle. */
+@media (prefers-color-scheme: dark) {
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+}

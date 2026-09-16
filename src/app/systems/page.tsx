@@ -5,6 +5,7 @@ import {
   Building2,
   ClipboardList,
   Activity,
+  Siren,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
@@ -132,6 +133,7 @@ export default async function DashboardPage() {
     pendingStagesTotal,
     stageSystems,
     archivedCount,
+    openIncidentCount,
     recentActivity,
   ] = await Promise.all([
     prisma.aiSystem.count({ where: activeFilter }),
@@ -167,6 +169,7 @@ export default async function DashboardPage() {
       select: { stages: { select: { status: true } } },
     }),
     prisma.aiSystem.count({ where: { organizationId: orgId, archivedAt: { not: null } } }),
+    prisma.incident.count({ where: { resolvedAt: null, aiSystem: activeFilter } }),
     prisma.auditLogEntry.findMany({
       where: { aiSystem: { organizationId: orgId } },
       include: { actor: true, aiSystem: { select: { id: true, name: true } } },
@@ -354,7 +357,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className={tileClass}>
           <div className="flex items-center gap-2 text-zinc-500">
             <Boxes size={16} />
@@ -406,6 +409,23 @@ export default async function DashboardPage() {
           <Link href="/systems/vendors" className={`mt-1 inline-block text-xs ${subtleLinkClass}`}>
             View vendors
           </Link>
+        </div>
+
+        <div className={tileClass}>
+          <div className="flex items-center gap-2 text-zinc-500">
+            <Siren size={16} />
+            <span className="text-xs uppercase tracking-wide">Incidents</span>
+          </div>
+          <p className="mt-2 text-2xl font-semibold">{openIncidentCount}</p>
+          <p
+            className={
+              openIncidentCount > 0
+                ? "mt-1 text-xs text-amber-600 dark:text-amber-400"
+                : "mt-1 text-xs text-zinc-500"
+            }
+          >
+            {openIncidentCount > 0 ? "open, needs review" : "none open"}
+          </p>
         </div>
       </div>
 

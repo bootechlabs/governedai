@@ -651,7 +651,10 @@ export default async function SystemDetailPage({
                 </option>
               ))}
             </select>
-            <input type="date" name="occurredAt" required className={inputClass} />
+            <label className="flex flex-col gap-1 text-xs text-zinc-500">
+              Occurred on
+              <input type="date" name="occurredAt" required className={inputClass} />
+            </label>
           </div>
           <textarea
             name="description"
@@ -663,7 +666,10 @@ export default async function SystemDetailPage({
             <input type="checkbox" name="disclosedToPatient" />
             Disclosed to patient/enrollee
           </label>
-          <input type="date" name="disclosedAt" placeholder="Disclosed on" className={inputClass} />
+          <label className="flex flex-col gap-1 text-xs text-zinc-500">
+            Disclosed on
+            <input type="date" name="disclosedAt" className={inputClass} />
+          </label>
           <button type="submit" className={`self-start ${primaryButtonClass}`}>
             Report incident
           </button>
