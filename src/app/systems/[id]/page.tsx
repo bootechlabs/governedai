@@ -9,6 +9,7 @@ import {
   Paperclip,
   ScrollText,
   AlertTriangle,
+  Siren,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import {
@@ -17,6 +18,8 @@ import {
   updateAiSystem,
   archiveAiSystem,
   unarchiveAiSystem,
+  reportIncident,
+  resolveIncident,
 } from "../actions";
 import {
   ClassificationBadge,
@@ -27,6 +30,7 @@ import {
   EvidenceCategoryBadge,
   evidenceCategoryLabels,
 } from "@/lib/badges";
+import { IncidentCategoryBadge, incidentCategoryConfig } from "@/lib/incidents";
 import { isStageActionable, needsRecertification } from "@/lib/workflow";
 import { USE_CASE_TEMPLATE_LABELS, getTrackedStates } from "@/lib/risk-classification";
 import { getRelevantRiskDomains, riskDomainConfig } from "@/lib/risk-domains";
@@ -40,12 +44,13 @@ import { canManageSystem, canDecideStage, canCreateSystem } from "@/lib/permissi
 
 export const dynamic = "force-dynamic";
 
-type TabKey = "risk" | "workflow" | "evidence" | "audit";
-const TAB_KEYS: TabKey[] = ["risk", "workflow", "evidence", "audit"];
+type TabKey = "risk" | "workflow" | "evidence" | "incidents" | "audit";
+const TAB_KEYS: TabKey[] = ["risk", "workflow", "evidence", "incidents", "audit"];
 const TAB_CONFIG: Record<TabKey, { label: string; icon: typeof ShieldAlert }> = {
   risk: { label: "Risk classification", icon: ShieldAlert },
   workflow: { label: "Workflow", icon: GitBranch },
   evidence: { label: "Evidence", icon: Paperclip },
+  incidents: { label: "Incidents", icon: Siren },
   audit: { label: "Audit log", icon: ScrollText },
 };
 
@@ -79,6 +84,10 @@ export default async function SystemDetailPage({
       shareLinks: {
         orderBy: { createdAt: "desc" },
         include: { _count: { select: { views: true } } },
+      },
+      incidents: {
+        orderBy: { occurredAt: "desc" },
+        include: { reportedBy: true, resolvedBy: true },
       },
     },
   });
@@ -616,6 +625,113 @@ export default async function SystemDetailPage({
             </span>
           </li>
         ))}
+      </ul>
+      </div>
+      )}
+
+      {tab === "incidents" && (
+      <div role="tabpanel">
+      {!isArchived && (
+        <form
+          action={reportIncident.bind(null, system.id)}
+          className="mt-4 flex flex-col gap-2 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800"
+        >
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <select name="category" defaultValue="OTHER" className={inputClass}>
+              {Object.entries(incidentCategoryConfig).map(([value, config]) => (
+                <option key={value} value={value}>
+                  {config.label}
+                </option>
+              ))}
+            </select>
+            <select name="severity" defaultValue="MODERATE" className={inputClass}>
+              {(["LOW", "MODERATE", "HIGH", "CRITICAL"] as const).map((tier) => (
+                <option key={tier} value={tier}>
+                  {tier}
+                </option>
+              ))}
+            </select>
+            <input type="date" name="occurredAt" required className={inputClass} />
+          </div>
+          <textarea
+            name="description"
+            placeholder="What happened?"
+            required
+            className={`${inputClass} min-h-16`}
+          />
+          <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+            <input type="checkbox" name="disclosedToPatient" />
+            Disclosed to patient/enrollee
+          </label>
+          <input type="date" name="disclosedAt" placeholder="Disclosed on" className={inputClass} />
+          <button type="submit" className={`self-start ${primaryButtonClass}`}>
+            Report incident
+          </button>
+        </form>
+      )}
+      <ul className="mt-4 flex flex-col gap-3 text-sm">
+        {system.incidents.length === 0 && (
+          <li className="text-zinc-500">No incidents reported.</li>
+        )}
+        {system.incidents.map((incident) => {
+          const isResolved = !!incident.resolvedAt;
+          return (
+            <li
+              key={incident.id}
+              className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+            >
+              <div className="flex flex-wrap items-center gap-3">
+                <IncidentCategoryBadge value={incident.category} />
+                <RiskTierBadge value={incident.severity} />
+                <span className="text-xs text-zinc-500">
+                  {incident.occurredAt.toISOString().slice(0, 10)}
+                </span>
+                <span
+                  className={
+                    isResolved
+                      ? "text-xs text-emerald-600 dark:text-emerald-400"
+                      : "text-xs text-amber-600 dark:text-amber-400"
+                  }
+                >
+                  {isResolved ? "Resolved" : "Open"}
+                </span>
+                {incident.disclosedToPatient && (
+                  <span className="text-xs text-zinc-500">
+                    Disclosed {incident.disclosedAt?.toISOString().slice(0, 10)}
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 text-zinc-700 dark:text-zinc-300">{incident.description}</p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Reported by {incident.reportedBy.name ?? incident.reportedBy.email}
+              </p>
+              {isResolved ? (
+                <p className="mt-2 text-xs text-zinc-500">
+                  Remediation: {incident.remediation} — resolved by{" "}
+                  {incident.resolvedBy?.name ?? incident.resolvedBy?.email}
+                </p>
+              ) : (
+                canDecide &&
+                !isArchived && (
+                  <form
+                    action={resolveIncident.bind(null, system.id, incident.id)}
+                    className="mt-2 flex flex-col gap-2 sm:flex-row"
+                  >
+                    <textarea
+                      name="remediation"
+                      placeholder="Remediation summary"
+                      required
+                      className={`flex-1 ${inputClass}`}
+                    />
+                    <button type="submit" className={primaryButtonClass}>
+                      Mark resolved
+                    </button>
+                  </form>
+                )
+              )}
+            </li>
+          );
+        })}
       </ul>
       </div>
       )}

@@ -146,6 +146,7 @@ describe("buildGovernanceReportPdf", () => {
     stages: [],
     evidence: [],
     auditLog: [],
+    incidents: [],
   };
 
   it("produces a real PDF (magic bytes) with no risk classification, stages, evidence, or audit log", async () => {

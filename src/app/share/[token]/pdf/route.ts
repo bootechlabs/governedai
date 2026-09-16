@@ -28,6 +28,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       stages: { orderBy: { sequence: "asc" }, include: { owner: true } },
       evidence: { orderBy: { uploadedAt: "desc" }, include: { uploadedBy: true } },
       auditLog: { orderBy: { occurredAt: "asc" }, include: { actor: true } },
+      incidents: {
+        orderBy: { occurredAt: "desc" },
+        include: { reportedBy: true, resolvedBy: true },
+      },
     },
   });
   if (!system) notFound();
@@ -38,6 +42,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     stages: system.stages,
     evidence: system.evidence,
     auditLog: system.auditLog,
+    incidents: system.incidents,
   });
 
   return new NextResponse(new Uint8Array(pdf), {

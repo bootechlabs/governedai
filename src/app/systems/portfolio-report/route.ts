@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
           include: { triggeredRegulationRows: { include: { regulation: { include: { artifacts: true } } } } },
         },
         evidence: { select: { category: true, label: true, fileUrl: true, linkUrl: true } },
+        incidents: { select: { resolvedAt: true } },
       },
     }),
   ]);

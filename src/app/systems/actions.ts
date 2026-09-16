@@ -12,7 +12,14 @@ import { canCreateSystem, canManageSystem, canDecideStage } from "@/lib/permissi
 import { requiresRationale } from "@/lib/workflow";
 import { detectChanges, serializeStatesDeployed } from "@/lib/change-events";
 import { generateShareToken, SHARE_LINK_DURATIONS_DAYS } from "@/lib/share-links";
-import type { DataClassification, DeploymentStatus, StageStatus, EvidenceCategory } from "@prisma/client";
+import type {
+  DataClassification,
+  DeploymentStatus,
+  StageStatus,
+  EvidenceCategory,
+  IncidentCategory,
+  RiskTier,
+} from "@prisma/client";
 
 function parseAiSystemFields(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
@@ -338,6 +345,82 @@ export async function revokeShareLink(aiSystemId: string, shareLinkId: string) {
     actorId: actor.id,
     action: "share_link_revoked",
     detail: { tokenPrefix: shareLink.tokenPrefix },
+  });
+
+  revalidatePath(`/systems/${aiSystemId}`);
+}
+
+// No role gate here — anyone who can see a system can report an incident
+// on it, same reasoning as attachEvidence ("every role can attach
+// evidence... nothing to gate"). Resolving one is gated below.
+export async function reportIncident(aiSystemId: string, formData: FormData) {
+  const category = String(formData.get("category") ?? "") as IncidentCategory;
+  const severity = String(formData.get("severity") ?? "") as RiskTier;
+  const occurredAtRaw = String(formData.get("occurredAt") ?? "");
+  const description = String(formData.get("description") ?? "").trim();
+  const disclosedToPatient = formData.get("disclosedToPatient") === "on";
+  const disclosedAtRaw = String(formData.get("disclosedAt") ?? "");
+
+  if (!category || !severity || !occurredAtRaw || !description) {
+    throw new Error("Category, severity, date, and description are required");
+  }
+  if (disclosedToPatient && !disclosedAtRaw) {
+    throw new Error("A disclosure date is required when disclosure is marked as made");
+  }
+
+  const actor = await getCurrentUser();
+  await assertSystemEditable(aiSystemId, actor.organizationId);
+
+  const incident = await prisma.incident.create({
+    data: {
+      aiSystemId,
+      category,
+      severity,
+      occurredAt: new Date(occurredAtRaw),
+      description,
+      disclosedToPatient,
+      disclosedAt: disclosedToPatient ? new Date(disclosedAtRaw) : null,
+      reportedById: actor.id,
+    },
+  });
+
+  await logAuditEntry({
+    aiSystemId,
+    actorId: actor.id,
+    action: "incident_reported",
+    detail: { incidentId: incident.id, category, severity },
+  });
+
+  revalidatePath(`/systems/${aiSystemId}`);
+}
+
+export async function resolveIncident(aiSystemId: string, incidentId: string, formData: FormData) {
+  const remediation = String(formData.get("remediation") ?? "").trim();
+  if (!remediation) {
+    throw new Error("A remediation summary is required to resolve an incident");
+  }
+
+  const actor = await getCurrentUser();
+  if (!canDecideStage(actor.role)) {
+    throw new Error("Your role can't resolve incidents");
+  }
+  await assertSystemEditable(aiSystemId, actor.organizationId);
+
+  const incident = await prisma.incident.findUniqueOrThrow({ where: { id: incidentId } });
+  if (incident.aiSystemId !== aiSystemId) {
+    throw new Error("Not found");
+  }
+
+  await prisma.incident.update({
+    where: { id: incidentId },
+    data: { remediation, resolvedAt: new Date(), resolvedById: actor.id },
+  });
+
+  await logAuditEntry({
+    aiSystemId,
+    actorId: actor.id,
+    action: "incident_resolved",
+    detail: { incidentId },
   });
 
   revalidatePath(`/systems/${aiSystemId}`);

@@ -8,6 +8,8 @@ import type {
   DeploymentStatus,
   EvidenceCategory,
   EvidenceType,
+  Incident,
+  IncidentCategory,
   RiskClassification,
   RiskTier,
   StageStatus,
@@ -17,6 +19,7 @@ import type {
 } from "@prisma/client";
 import { USE_CASE_TEMPLATE_LABELS } from "@/lib/risk-classification";
 import { getRelevantRiskDomains, riskDomainConfig } from "@/lib/risk-domains";
+import { incidentCategoryConfig } from "@/lib/incidents";
 import { computeRegulationSectionStatuses } from "@/lib/regulation-sections";
 
 type AuditEntryWithActor = AuditLogEntry & { actor: User };
@@ -80,6 +83,11 @@ export interface PortfolioSystemInput {
     fileUrl: string | null;
     linkUrl: string | null;
   }[];
+  incidents: { resolvedAt: Date | null }[];
+}
+
+function openIncidentCount(system: { incidents: { resolvedAt: Date | null }[] }): number {
+  return system.incidents.filter((i) => !i.resolvedAt).length;
 }
 
 function missingComplianceCount(system: PortfolioSystemInput): number {
@@ -100,6 +108,7 @@ export function buildPortfolioCsv(systems: PortfolioSystemInput[]) {
     "Risk Tier",
     "Triggered Regulations",
     "Missing Compliance Items",
+    "Open Incidents",
   ].join(",");
 
   const rows = systems.map((system) => {
@@ -119,6 +128,7 @@ export function buildPortfolioCsv(systems: PortfolioSystemInput[]) {
       riskTier,
       regulations,
       String(missingComplianceCount(system)),
+      String(openIncidentCount(system)),
     ]
       .map(csvEscape)
       .join(",");
@@ -143,7 +153,12 @@ export interface GovernanceReportInput {
     uploadedAt: Date;
   }[];
   auditLog: AuditEntryWithActor[];
+  incidents: (Incident & { reportedBy: User; resolvedBy: User | null })[];
 }
+
+const incidentCategoryLabels: Record<IncidentCategory, string> = Object.fromEntries(
+  Object.entries(incidentCategoryConfig).map(([value, config]) => [value, config.label]),
+) as Record<IncidentCategory, string>;
 
 const stageStatusLabels: Record<StageStatus, string> = {
   PENDING: "Pending",
@@ -175,7 +190,7 @@ function drawLogo(doc: PDFKit.PDFDocument, x: number, y: number, size: number) {
 }
 
 export async function buildGovernanceReportPdf(input: GovernanceReportInput) {
-  const { system, riskClassification, stages, evidence, auditLog } = input;
+  const { system, riskClassification, stages, evidence, auditLog, incidents } = input;
   const doc = new PDFDocument({ margin: 50 });
   const chunks: Buffer[] = [];
   doc.on("data", (chunk) => chunks.push(chunk));
@@ -364,6 +379,44 @@ export async function buildGovernanceReportPdf(input: GovernanceReportInput) {
     doc.moveDown(0.15);
   });
 
+  // --- Incidents (slice 12) ---
+  heading(doc, "Incidents");
+  if (incidents.length === 0) {
+    doc.fontSize(10).fillColor("#666").text("No incidents reported.");
+  }
+  incidents.forEach((incident) => {
+    const status = incident.resolvedAt ? "Resolved" : "Open";
+    doc
+      .fontSize(10)
+      .fillColor("#000")
+      .text(
+        `[${status}] ${incidentCategoryLabels[incident.category]} — ${incident.severity} — ${incident.occurredAt.toISOString().slice(0, 10)}`,
+      );
+    doc.fontSize(9).fillColor("#333").text(incident.description, { indent: 12 });
+    if (incident.disclosedToPatient) {
+      doc
+        .fontSize(8)
+        .fillColor("#999")
+        .text(`Disclosed to patient on ${incident.disclosedAt?.toISOString().slice(0, 10)}`, {
+          indent: 12,
+        });
+    }
+    doc
+      .fontSize(8)
+      .fillColor("#999")
+      .text(`Reported by ${incident.reportedBy.name ?? incident.reportedBy.email}`, { indent: 12 });
+    if (incident.resolvedAt) {
+      doc
+        .fontSize(8)
+        .fillColor("#999")
+        .text(
+          `Remediation: ${incident.remediation} — resolved by ${incident.resolvedBy?.name ?? incident.resolvedBy?.email}`,
+          { indent: 12 },
+        );
+    }
+    doc.moveDown(0.25);
+  });
+
   // --- Audit trail ---
   heading(doc, "Audit Trail");
   if (auditLog.length === 0) {
@@ -468,6 +521,13 @@ export async function buildPortfolioReportPdf(
           `${missingCount} compliance item${missingCount === 1 ? "" : "s"} missing evidence`,
           { indent: 12 },
         );
+    }
+    const openIncidents = openIncidentCount(system);
+    if (openIncidents > 0) {
+      doc
+        .fontSize(9)
+        .fillColor("#a83232")
+        .text(`${openIncidents} open incident${openIncidents === 1 ? "" : "s"}`, { indent: 12 });
     }
     doc.moveDown(0.4);
   });

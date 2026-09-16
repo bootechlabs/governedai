@@ -170,6 +170,8 @@ model User {
   impersonationsReceived       ImpersonationSession[] @relation("ImpersonationTarget")
   changeEventsRecorded         ChangeEvent[]          @relation("ChangeEventActor")
   shareLinksCreated            ShareLink[]            @relation("ShareLinkCreator")
+  incidentsReported            Incident[]             @relation("IncidentReporter")
+  incidentsResolved            Incident[]             @relation("IncidentResolver")
 
   @@unique([organizationId, email])
 }
@@ -227,6 +229,7 @@ model AiSystem {
   riskClassification RiskClassification?
   changeEvents       ChangeEvent[]
   shareLinks         ShareLink[]
+  incidents          Incident[]
 
   @@index([organizationId])
 }
@@ -287,6 +290,49 @@ model ShareLinkView {
   shareLinkId String
 
   @@index([shareLinkId])
+}
+
+enum IncidentCategory {
+  INCORRECT_DENIAL
+  HALLUCINATED_OUTPUT
+  BIAS_FINDING
+  PRIVACY_BREACH
+  SECURITY_INCIDENT
+  OTHER
+}
+
+// Slice 12 — an adverse AI event (wrong denial, hallucinated note, bias
+// finding), distinct from AuditLogEntry which records routine state
+// changes, not incidents. disclosedToPatient/disclosedAt exist because
+// several 2026 state payer/UM laws (see RegulationDefinition's
+// STATE_DEPLOYMENT rows) require disclosure when AI drove an adverse
+// determination. No separate status enum — open/resolved is derived
+// from resolvedAt being null, same idiom as WorkflowStage.decidedAt and
+// ShareLink.revokedAt.
+model Incident {
+  id          String           @id @default(cuid())
+  category    IncidentCategory
+  severity    RiskTier
+  occurredAt  DateTime
+  description String
+  createdAt   DateTime         @default(now())
+
+  disclosedToPatient Boolean   @default(false)
+  disclosedAt        DateTime?
+
+  remediation String?
+  resolvedAt  DateTime?
+
+  aiSystem   AiSystem @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+  aiSystemId String
+
+  reportedBy   User   @relation("IncidentReporter", fields: [reportedById], references: [id])
+  reportedById String
+
+  resolvedBy   User?   @relation("IncidentResolver", fields: [resolvedById], references: [id])
+  resolvedById String?
+
+  @@index([aiSystemId])
 }
 
 // Produced by the intake questionnaire (src/lib/risk-classification.ts) —
