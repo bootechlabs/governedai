@@ -9,11 +9,7 @@ import {
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
-import {
-  deploymentStatusConfig,
-  riskTierConfig,
-  StageStatusBadge,
-} from "@/lib/badges";
+import { deploymentStatusConfig, riskTierConfig } from "@/lib/badges";
 import { subtleLinkClass } from "@/lib/ui";
 import type { DeploymentStatus, RiskTier, StageStatus } from "@prisma/client";
 
@@ -129,7 +125,6 @@ export default async function DashboardPage() {
     riskGroups,
     vendorTotal,
     vendorAttentionRows,
-    pendingStages,
     pendingStagesTotal,
     stageSystems,
     archivedCount,
@@ -152,12 +147,6 @@ export default async function DashboardPage() {
     prisma.vendor.findMany({
       where: { organizationId: orgId },
       select: { baaStatus: true, lastAttestedAt: true, attestationCadenceDays: true },
-    }),
-    prisma.workflowStage.findMany({
-      where: { status: { in: ["PENDING", "IN_REVIEW"] }, aiSystem: activeFilter },
-      include: { aiSystem: { select: { id: true, name: true } } },
-      orderBy: { aiSystem: { createdAt: "desc" } },
-      take: 10,
     }),
     prisma.workflowStage.count({
       where: { status: { in: ["PENDING", "IN_REVIEW"] }, aiSystem: activeFilter },
@@ -274,33 +263,6 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-5xl px-6 py-12">
       <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
-      {/* What needs action outranks passive counts — comes first, and reads
-          as a callout, not just another tile in the grid below. */}
-      {pendingStages.length > 0 && (
-        <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-amber-900 dark:text-amber-300">
-            <ClipboardList size={16} />
-            Pending review ({pendingStagesTotal})
-          </h2>
-          <ul className="mt-3 flex flex-col gap-2 text-sm">
-            {pendingStages.map((stage) => (
-              <li key={stage.id} className="flex items-center justify-between">
-                <Link href={`/systems/${stage.aiSystem.id}`} className="underline hover:no-underline">
-                  {stage.aiSystem.name}
-                </Link>
-                <span className="flex items-center gap-3 text-zinc-600 dark:text-zinc-400">
-                  {stage.stageName}
-                  <StageStatusBadge value={stage.status} />
-                </span>
-              </li>
-            ))}
-            {pendingStagesTotal > pendingStages.length && (
-              <li className="text-xs text-zinc-500">+{pendingStagesTotal - pendingStages.length} more</li>
-            )}
-          </ul>
-        </div>
-      )}
-
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <div className={tileClass}>
           <h2 className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -357,7 +319,24 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className={tileClass}>
+          <div className="flex items-center gap-2 text-zinc-500">
+            <ClipboardList size={16} />
+            <span className="text-xs uppercase tracking-wide">Pending review</span>
+          </div>
+          <p className="mt-2 text-2xl font-semibold">{pendingStagesTotal}</p>
+          <p
+            className={
+              pendingStagesTotal > 0
+                ? "mt-1 text-xs text-amber-600 dark:text-amber-400"
+                : "mt-1 text-xs text-zinc-500"
+            }
+          >
+            {pendingStagesTotal > 0 ? "needs review" : "none pending"}
+          </p>
+        </div>
+
         <div className={tileClass}>
           <div className="flex items-center gap-2 text-zinc-500">
             <Boxes size={16} />
