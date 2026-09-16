@@ -29,6 +29,7 @@ import {
 } from "@/lib/badges";
 import { isStageActionable, needsRecertification } from "@/lib/workflow";
 import { USE_CASE_TEMPLATE_LABELS, getTrackedStates } from "@/lib/risk-classification";
+import { getRelevantRiskDomains, riskDomainConfig } from "@/lib/risk-domains";
 import { computeRegulationSectionStatuses } from "@/lib/regulation-sections";
 import { inputClass, primaryButtonClass, subtleLinkClass } from "@/lib/ui";
 import { DeleteSystemButton } from "./delete-button";
@@ -430,6 +431,28 @@ export default async function SystemDetailPage({
               </span>
             </div>
           )}
+          <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+            <p className="text-xs font-medium text-zinc-500">Suggested accountability</p>
+            <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1">
+              {getRelevantRiskDomains(system.riskClassification.useCaseTemplate).map((domain) => {
+                const config = riskDomainConfig[domain];
+                const Icon = config.icon;
+                return (
+                  <li
+                    key={domain}
+                    className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400"
+                  >
+                    <Icon size={13} />
+                    {config.label} → {config.accountableFunction}
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="mt-1.5 text-xs text-zinc-400">
+              Suggested ownership based on use case — confirm the accountable owner internally; not
+              a legal or organizational assignment.
+            </p>
+          </div>
           {triggeredRegulations.length > 0 && (
             <div className="mt-3">
               <p className="text-xs text-zinc-500">

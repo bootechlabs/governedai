@@ -16,6 +16,7 @@ import type {
   WorkflowStage,
 } from "@prisma/client";
 import { USE_CASE_TEMPLATE_LABELS } from "@/lib/risk-classification";
+import { getRelevantRiskDomains, riskDomainConfig } from "@/lib/risk-domains";
 import { computeRegulationSectionStatuses } from "@/lib/regulation-sections";
 
 type AuditEntryWithActor = AuditLogEntry & { actor: User };
@@ -273,6 +274,21 @@ export async function buildGovernanceReportPdf(input: GovernanceReportInput) {
         .fillColor("#999")
         .text("GovernedAI's own risk lens — not derived from or aligned to any external certification or proprietary framework.");
     }
+
+    // --- Suggested accountability (slice 11) — a heuristic bootstrap from
+    // the use case alone, not per-answer. Advisory only. ---
+    heading(doc, "Suggested Accountability");
+    getRelevantRiskDomains(riskClassification.useCaseTemplate).forEach((domain) => {
+      const config = riskDomainConfig[domain];
+      doc.fontSize(10).fillColor("#333").text(`${config.label} → ${config.accountableFunction}`);
+    });
+    doc
+      .moveDown(0.25)
+      .fontSize(8)
+      .fillColor("#999")
+      .text(
+        "Suggested ownership based on use case — confirm the accountable owner internally; not a legal or organizational assignment.",
+      );
 
     // --- Law-specific sections (only ones with a checkable artifact —
     // broad frameworks like NIST AI RMF/ISO 42001 have none) ---
