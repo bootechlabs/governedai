@@ -225,13 +225,21 @@ export default async function DashboardPage() {
   const maxProjectStatus = Math.max(1, ...projectStatusRows.map((r) => r.value));
 
   const riskDonutSegments = [
-    { key: "LOW", label: riskTierConfig.LOW.label, value: riskCounts.LOW ?? 0, strokeClass: "stroke-zinc-500", dotClass: "bg-zinc-500" },
+    {
+      key: "LOW",
+      label: riskTierConfig.LOW.label,
+      value: riskCounts.LOW ?? 0,
+      strokeClass: "stroke-zinc-500",
+      dotClass: "bg-zinc-500",
+      href: "/systems/inventory?risk=LOW",
+    },
     {
       key: "MODERATE",
       label: riskTierConfig.MODERATE.label,
       value: riskCounts.MODERATE ?? 0,
       strokeClass: "stroke-amber-600 dark:stroke-amber-400",
       dotClass: "bg-amber-600 dark:bg-amber-400",
+      href: "/systems/inventory?risk=MODERATE",
     },
     {
       key: "HIGH",
@@ -239,6 +247,7 @@ export default async function DashboardPage() {
       value: riskCounts.HIGH ?? 0,
       strokeClass: "stroke-orange-600 dark:stroke-orange-400",
       dotClass: "bg-orange-600 dark:bg-orange-400",
+      href: "/systems/inventory?risk=HIGH",
     },
     {
       key: "CRITICAL",
@@ -246,6 +255,7 @@ export default async function DashboardPage() {
       value: riskCounts.CRITICAL ?? 0,
       strokeClass: "stroke-red-600 dark:stroke-red-400",
       dotClass: "bg-red-600 dark:bg-red-400",
+      href: "/systems/inventory?risk=CRITICAL",
     },
     {
       key: "UNCLASSIFIED",
@@ -253,6 +263,7 @@ export default async function DashboardPage() {
       value: unclassifiedCount,
       strokeClass: "stroke-amber-600 dark:stroke-amber-400",
       dotClass: "bg-amber-600 dark:bg-amber-400",
+      href: null,
     },
   ];
 
@@ -287,7 +298,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className={tileClass}>
           <div className="flex items-center gap-2 text-zinc-500">
             <Boxes size={16} />
@@ -327,38 +338,6 @@ export default async function DashboardPage() {
 
         <div className={tileClass}>
           <div className="flex items-center gap-2 text-zinc-500">
-            <ShieldAlert size={16} />
-            <span className="text-xs uppercase tracking-wide">By risk tier</span>
-          </div>
-          <ul className="mt-2 flex flex-col gap-1 text-sm">
-            {(Object.keys(riskTierConfig) as RiskTier[]).map((tier) => {
-              const Icon = riskTierConfig[tier].icon;
-              return (
-                <li key={tier}>
-                  <Link
-                    href={`/systems/inventory?risk=${tier}`}
-                    className="flex items-center justify-between rounded hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
-                  >
-                    <span className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
-                      <Icon size={14} />
-                      {riskTierConfig[tier].label}
-                    </span>
-                    <span className="font-medium">{riskCounts[tier] ?? 0}</span>
-                  </Link>
-                </li>
-              );
-            })}
-            {unclassifiedCount > 0 && (
-              <li className="flex items-center justify-between border-t border-zinc-200 pt-1 text-amber-600 dark:border-zinc-800 dark:text-amber-400">
-                <span>Not yet assessed</span>
-                <span className="font-medium">{unclassifiedCount}</span>
-              </li>
-            )}
-          </ul>
-        </div>
-
-        <div className={tileClass}>
-          <div className="flex items-center gap-2 text-zinc-500">
             <Building2 size={16} />
             <span className="text-xs uppercase tracking-wide">Vendors</span>
           </div>
@@ -376,21 +355,38 @@ export default async function DashboardPage() {
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <div className={tileClass}>
-          <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <h2 className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <ShieldAlert size={16} className="text-zinc-500" />
             What is the risk of my AI systems?
           </h2>
           <div className="mt-4 flex items-center gap-6">
             <RiskDonut segments={riskDonutSegments} total={totalActive} />
-            <ul className="flex flex-1 flex-col gap-1.5 text-sm">
-              {riskDonutSegments.map((s) => (
-                <li key={s.key} className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${s.dotClass}`} />
-                    {s.label}
+            <ul className="flex flex-1 flex-col gap-1 text-sm">
+              {riskDonutSegments.map((s) => {
+                const row = (
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400">
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${s.dotClass}`} />
+                      {s.label}
+                    </span>
+                    <span className="font-medium">{s.value}</span>
                   </span>
-                  <span className="font-medium">{s.value}</span>
-                </li>
-              ))}
+                );
+                return (
+                  <li key={s.key}>
+                    {s.href ? (
+                      <Link
+                        href={s.href}
+                        className="block rounded hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
+                      >
+                        {row}
+                      </Link>
+                    ) : (
+                      row
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
