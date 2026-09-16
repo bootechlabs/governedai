@@ -263,7 +263,7 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-5xl px-6 py-12">
       <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className={tileClass}>
           <h2 className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
             <ShieldAlert size={16} className="text-zinc-500" />
@@ -317,26 +317,45 @@ export default async function DashboardPage() {
             ))}
           </ul>
         </div>
+
+        <div className="flex flex-col gap-4">
+          <div className={tileClass}>
+            <div className="flex items-center gap-2 text-zinc-500">
+              <ClipboardList size={16} />
+              <span className="text-xs uppercase tracking-wide">Pending review</span>
+            </div>
+            <p className="mt-2 text-2xl font-semibold">{pendingStagesTotal}</p>
+            <p
+              className={
+                pendingStagesTotal > 0
+                  ? "mt-1 text-xs text-amber-600 dark:text-amber-400"
+                  : "mt-1 text-xs text-zinc-500"
+              }
+            >
+              {pendingStagesTotal > 0 ? "needs review" : "none pending"}
+            </p>
+          </div>
+
+          <div className={tileClass}>
+            <div className="flex items-center gap-2 text-zinc-500">
+              <Siren size={16} />
+              <span className="text-xs uppercase tracking-wide">Incidents</span>
+            </div>
+            <p className="mt-2 text-2xl font-semibold">{openIncidentCount}</p>
+            <p
+              className={
+                openIncidentCount > 0
+                  ? "mt-1 text-xs text-amber-600 dark:text-amber-400"
+                  : "mt-1 text-xs text-zinc-500"
+              }
+            >
+              {openIncidentCount > 0 ? "open, needs review" : "none open"}
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <div className={tileClass}>
-          <div className="flex items-center gap-2 text-zinc-500">
-            <ClipboardList size={16} />
-            <span className="text-xs uppercase tracking-wide">Pending review</span>
-          </div>
-          <p className="mt-2 text-2xl font-semibold">{pendingStagesTotal}</p>
-          <p
-            className={
-              pendingStagesTotal > 0
-                ? "mt-1 text-xs text-amber-600 dark:text-amber-400"
-                : "mt-1 text-xs text-zinc-500"
-            }
-          >
-            {pendingStagesTotal > 0 ? "needs review" : "none pending"}
-          </p>
-        </div>
-
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className={tileClass}>
           <div className="flex items-center gap-2 text-zinc-500">
             <Boxes size={16} />
@@ -388,23 +407,6 @@ export default async function DashboardPage() {
           <Link href="/systems/vendors" className={`mt-1 inline-block text-xs ${subtleLinkClass}`}>
             View vendors
           </Link>
-        </div>
-
-        <div className={tileClass}>
-          <div className="flex items-center gap-2 text-zinc-500">
-            <Siren size={16} />
-            <span className="text-xs uppercase tracking-wide">Incidents</span>
-          </div>
-          <p className="mt-2 text-2xl font-semibold">{openIncidentCount}</p>
-          <p
-            className={
-              openIncidentCount > 0
-                ? "mt-1 text-xs text-amber-600 dark:text-amber-400"
-                : "mt-1 text-xs text-zinc-500"
-            }
-          >
-            {openIncidentCount > 0 ? "open, needs review" : "none open"}
-          </p>
         </div>
       </div>
 
