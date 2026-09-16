@@ -32,13 +32,14 @@ export default async function SystemsLayout({
   return (
     <div>
       <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-3 text-sm dark:border-zinc-800">
-        {/* The lockup's wordmark is dark navy — illegible on the dark
-            theme until a light-wordmark variant exists. Plain text stands
-            in for dark mode only; swap this for the real asset once it
-            lands. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/governedai-logo-lockup.png" alt="GovernedAI" className="h-6 w-auto dark:hidden" />
-        <span className="hidden font-medium dark:inline">GovernedAI</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/governedai-logo-lockup-dark.png"
+          alt="GovernedAI"
+          className="hidden h-6 w-auto dark:block"
+        />
         <div className="flex items-center gap-3 text-zinc-500">
           <Link href="/systems" className="inline-flex items-center gap-1.5 hover:underline">
             <LayoutDashboard size={15} />
