@@ -128,6 +128,14 @@ export default async function VendorsPage() {
                 )}
                 Model card
               </span>
+              <span className="flex items-center gap-1">
+                {vendor.securityEvalUrl ? (
+                  <Check size={12} className="text-emerald-600 dark:text-emerald-500" />
+                ) : (
+                  <span className="text-zinc-300 dark:text-zinc-600">—</span>
+                )}
+                Security eval
+              </span>
               {vendor.subprocessors.length > 0 && (
                 <span>
                   {vendor.subprocessors.length} subprocessor{vendor.subprocessors.length === 1 ? "" : "s"}

@@ -145,6 +145,7 @@ export const evidenceCategoryLabels: Record<EvidenceCategory, string> = {
   APPROVAL_RECORD: "Approval record",
   POLICY_DOCUMENT: "Policy document",
   SUBPROCESSOR_LIST: "Subprocessor list",
+  SECURITY_EVALUATION: "Security evaluation",
   OTHER: "Other",
 };
 

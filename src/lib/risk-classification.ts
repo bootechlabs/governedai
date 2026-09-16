@@ -297,6 +297,34 @@ export const TECH_DATA_QUESTIONS: RiskQuestion[] = [
   },
 ];
 
+// Slice 14 — gated to templates where the AI takes autonomous action
+// (prior auth/UM, RCM/billing, patient chatbot); ambient scribe and CDS
+// inform a human rather than act, so the question doesn't apply there.
+// Feeds techDataTier as an extra TECH_DATA_QUESTIONS entry rather than a
+// new taxonomy — see getTechDataQuestions below.
+export const ADVERSARIAL_TESTING_QUESTION: RiskQuestion = {
+  key: "adversarialTestingCompleted",
+  text: "Has this AI system undergone third-party adversarial testing for jailbreak/prompt-injection/unsafe-output resistance?",
+  options: [
+    { label: "Yes, tested by a qualified third party with results on file", weight: 0 },
+    { label: "Yes, tested internally only", weight: 1 },
+    { label: "Planned but not yet completed", weight: 2 },
+    { label: "No testing has been performed", weight: 3 },
+  ],
+};
+
+const AUTONOMOUS_ACTION_TEMPLATES: UseCaseTemplate[] = ["PRIOR_AUTH_UM", "RCM_BILLING", "PATIENT_CHATBOT"];
+
+export function getTechDataQuestions(template: UseCaseTemplate): RiskQuestion[] {
+  return AUTONOMOUS_ACTION_TEMPLATES.includes(template)
+    ? [...TECH_DATA_QUESTIONS, ADVERSARIAL_TESTING_QUESTION]
+    : TECH_DATA_QUESTIONS;
+}
+
+export function getSecondaryQuestions(template: UseCaseTemplate): RiskQuestion[] {
+  return [...LIFE_SAFETY_QUESTIONS, ...getTechDataQuestions(template)];
+}
+
 export function getQuestionsForTemplate(template: UseCaseTemplate): RiskQuestion[] {
   return [...CORE_QUESTIONS, ...TEMPLATE_QUESTIONS[template]];
 }
@@ -324,11 +352,12 @@ function scoreQuestions(questions: RiskQuestion[], answers: Record<string, numbe
 // TECH_DATA_QUESTIONS keys, so adding these questions never changes the
 // main tier's meaning for existing or future assessments.
 export function computeSecondaryRiskTiers(
+  template: UseCaseTemplate,
   answers: Record<string, number>,
 ): { lifeSafetyTier: RiskTier; techDataTier: RiskTier } {
   return {
     lifeSafetyTier: scoreQuestions(LIFE_SAFETY_QUESTIONS, answers),
-    techDataTier: scoreQuestions(TECH_DATA_QUESTIONS, answers),
+    techDataTier: scoreQuestions(getTechDataQuestions(template), answers),
   };
 }
 

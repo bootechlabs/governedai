@@ -1,12 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
   getQuestionsForTemplate,
+  getTechDataQuestions,
   computeRiskClassification,
   computeSecondaryRiskTiers,
   getTrackedStates,
   CORE_QUESTIONS,
   LIFE_SAFETY_QUESTIONS,
   TECH_DATA_QUESTIONS,
+  ADVERSARIAL_TESTING_QUESTION,
   type RegulationTriggerInput,
 } from "./risk-classification";
 
@@ -162,7 +164,7 @@ describe("getTrackedStates", () => {
 
 describe("computeSecondaryRiskTiers", () => {
   it("scores both domains as LOW when every answer is 0", () => {
-    const result = computeSecondaryRiskTiers({});
+    const result = computeSecondaryRiskTiers("GENERIC", {});
     expect(result).toEqual({ lifeSafetyTier: "LOW", techDataTier: "LOW" });
   });
 
@@ -170,13 +172,13 @@ describe("computeSecondaryRiskTiers", () => {
     const allMax = Object.fromEntries(
       [...LIFE_SAFETY_QUESTIONS, ...TECH_DATA_QUESTIONS].map((q) => [q.key, 3]),
     );
-    const result = computeSecondaryRiskTiers(allMax);
+    const result = computeSecondaryRiskTiers("GENERIC", allMax);
     expect(result).toEqual({ lifeSafetyTier: "CRITICAL", techDataTier: "CRITICAL" });
   });
 
   it("scores the two domains independently", () => {
     const lifeSafetyOnly = Object.fromEntries(LIFE_SAFETY_QUESTIONS.map((q) => [q.key, 3]));
-    const result = computeSecondaryRiskTiers(lifeSafetyOnly);
+    const result = computeSecondaryRiskTiers("GENERIC", lifeSafetyOnly);
     expect(result.lifeSafetyTier).toBe("CRITICAL");
     expect(result.techDataTier).toBe("LOW");
   });
@@ -185,7 +187,33 @@ describe("computeSecondaryRiskTiers", () => {
     // Same keys as the main questionnaire, maxed out — should have zero
     // effect on either secondary tier, since they score only their own keys.
     const coreOnly = Object.fromEntries(CORE_QUESTIONS.map((q) => [q.key, 3]));
-    const result = computeSecondaryRiskTiers(coreOnly);
+    const result = computeSecondaryRiskTiers("GENERIC", coreOnly);
     expect(result).toEqual({ lifeSafetyTier: "LOW", techDataTier: "LOW" });
+  });
+
+  // Slice 14 — the adversarial-testing question only applies to templates
+  // where the AI takes autonomous action.
+  it("gates the adversarial-testing question into TECH_DATA_QUESTIONS by template", () => {
+    expect(getTechDataQuestions("PATIENT_CHATBOT")).toContainEqual(ADVERSARIAL_TESTING_QUESTION);
+    expect(getTechDataQuestions("AMBIENT_SCRIBE")).not.toContainEqual(ADVERSARIAL_TESTING_QUESTION);
+  });
+
+  it("only scores the adversarial-testing answer into techDataTier for a gated template", () => {
+    // Base 3 tech-data questions maxed, adversarial question answered 0
+    // (well-tested). A gated template dilutes the score with that extra
+    // low-risk answer (9/12 = 75% -> HIGH); a non-gated template ignores
+    // the adversarial key entirely and scores only the base 3 (9/9 = 100%
+    // -> CRITICAL) — the two templates must land on different tiers given
+    // the same answers, proving the question only counts where gated.
+    const answers = {
+      dataProvenanceConfidence: 3,
+      externalExposure: 3,
+      changeManagementRigor: 3,
+      [ADVERSARIAL_TESTING_QUESTION.key]: 0,
+    };
+    const gated = computeSecondaryRiskTiers("PATIENT_CHATBOT", answers);
+    const nonGated = computeSecondaryRiskTiers("AMBIENT_SCRIBE", answers);
+    expect(gated.techDataTier).toBe("HIGH");
+    expect(nonGated.techDataTier).toBe("CRITICAL");
   });
 });

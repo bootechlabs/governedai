@@ -9,10 +9,9 @@ import { assertSystemEditable } from "@/lib/ai-systems";
 import { logAuditEntry } from "@/lib/audit-log";
 import {
   getQuestionsForTemplate,
+  getSecondaryQuestions,
   computeRiskClassification,
   computeSecondaryRiskTiers,
-  LIFE_SAFETY_QUESTIONS,
-  TECH_DATA_QUESTIONS,
 } from "@/lib/risk-classification";
 import type { UseCaseTemplate } from "@prisma/client";
 
@@ -30,7 +29,7 @@ export async function submitRiskAssessment(aiSystemId: string, formData: FormDat
   }
 
   const answers: Record<string, number> = {};
-  for (const question of [...questions, ...LIFE_SAFETY_QUESTIONS, ...TECH_DATA_QUESTIONS]) {
+  for (const question of [...questions, ...getSecondaryQuestions(template)]) {
     const raw = formData.get(question.key);
     const weight = Number(raw);
     if (raw === null || Number.isNaN(weight)) {
@@ -50,7 +49,7 @@ export async function submitRiskAssessment(aiSystemId: string, formData: FormDat
     system.statesDeployed,
     regulations,
   );
-  const { lifeSafetyTier, techDataTier } = computeSecondaryRiskTiers(answers);
+  const { lifeSafetyTier, techDataTier } = computeSecondaryRiskTiers(template, answers);
 
   await prisma.$transaction(async (tx) => {
     const riskClassification = await tx.riskClassification.upsert({

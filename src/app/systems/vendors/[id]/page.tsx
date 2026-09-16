@@ -80,6 +80,15 @@ export default async function VendorDetailPage({
           className={inputClass}
         />
 
+        <label className="text-xs font-medium text-zinc-500">Security evaluation URL</label>
+        <input
+          name="securityEvalUrl"
+          type="url"
+          defaultValue={vendor.securityEvalUrl ?? ""}
+          placeholder="https://..."
+          className={inputClass}
+        />
+
         <label className="text-xs font-medium text-zinc-500">Notes</label>
         <textarea name="notes" defaultValue={vendor.notes ?? ""} rows={3} className={inputClass} />
 

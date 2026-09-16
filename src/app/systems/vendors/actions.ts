@@ -43,6 +43,7 @@ export async function updateVendor(vendorId: string, formData: FormData) {
   const subprocessors = parseSubprocessors(String(formData.get("subprocessors") ?? ""));
   const soc2ReportUrl = String(formData.get("soc2ReportUrl") ?? "").trim() || null;
   const modelCardUrl = String(formData.get("modelCardUrl") ?? "").trim() || null;
+  const securityEvalUrl = String(formData.get("securityEvalUrl") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
   const attestationCadenceDays = Number(formData.get("attestationCadenceDays") ?? 365);
   if (!name) {
@@ -54,7 +55,16 @@ export async function updateVendor(vendorId: string, formData: FormData) {
 
   const { count } = await prisma.vendor.updateMany({
     where: { id: vendorId, organizationId: actor.organizationId },
-    data: { name, baaStatus, subprocessors, soc2ReportUrl, modelCardUrl, notes, attestationCadenceDays },
+    data: {
+      name,
+      baaStatus,
+      subprocessors,
+      soc2ReportUrl,
+      modelCardUrl,
+      securityEvalUrl,
+      notes,
+      attestationCadenceDays,
+    },
   });
   if (count === 0) {
     throw new Error("Vendor not found in your organization");

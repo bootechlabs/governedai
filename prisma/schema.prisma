@@ -91,6 +91,7 @@ enum EvidenceCategory {
   APPROVAL_RECORD
   POLICY_DOCUMENT
   SUBPROCESSOR_LIST
+  SECURITY_EVALUATION
   OTHER
 }
 
@@ -120,6 +121,7 @@ model Vendor {
   subprocessors             String[]
   soc2ReportUrl             String?
   modelCardUrl              String?
+  securityEvalUrl           String?
   notes                     String?
   // Re-attestation tracking (slice 10) — lastAttestedAt null means "never
   // tracked," not "overdue," so shipping this doesn't retroactively flag

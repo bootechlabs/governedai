@@ -6,9 +6,8 @@ import { canCreateSystem } from "@/lib/permissions";
 import { primaryButtonClass, subtleLinkClass } from "@/lib/ui";
 import {
   getQuestionsForTemplate,
+  getSecondaryQuestions,
   USE_CASE_TEMPLATE_LABELS,
-  LIFE_SAFETY_QUESTIONS,
-  TECH_DATA_QUESTIONS,
   type RiskQuestion,
 } from "@/lib/risk-classification";
 import { submitRiskAssessment } from "./actions";
@@ -110,7 +109,7 @@ export default async function RiskAssessmentPage({
   }
 
   const questions = getQuestionsForTemplate(template);
-  const secondaryQuestions = [...LIFE_SAFETY_QUESTIONS, ...TECH_DATA_QUESTIONS];
+  const secondaryQuestions = getSecondaryQuestions(template);
   const existingAnswers =
     system.riskClassification?.useCaseTemplate === template
       ? (system.riskClassification.answers as Record<string, number>)
