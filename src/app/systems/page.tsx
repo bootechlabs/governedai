@@ -298,61 +298,6 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className={tileClass}>
-          <div className="flex items-center gap-2 text-zinc-500">
-            <Boxes size={16} />
-            <span className="text-xs uppercase tracking-wide">AI systems</span>
-          </div>
-          <p className="mt-2 text-2xl font-semibold">{totalActive}</p>
-          <Link href="/systems/inventory" className={`mt-1 inline-block text-xs ${subtleLinkClass}`}>
-            View inventory
-          </Link>
-        </div>
-
-        <div className={tileClass}>
-          <div className="flex items-center gap-2 text-zinc-500">
-            <ClipboardList size={16} />
-            <span className="text-xs uppercase tracking-wide">By deployment status</span>
-          </div>
-          <ul className="mt-2 flex flex-col gap-1 text-sm">
-            {(Object.keys(deploymentStatusConfig) as DeploymentStatus[]).map((status) => {
-              const Icon = deploymentStatusConfig[status].icon;
-              return (
-                <li key={status}>
-                  <Link
-                    href={`/systems/inventory?status=${status}`}
-                    className="flex items-center justify-between rounded hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
-                  >
-                    <span className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
-                      <Icon size={14} />
-                      {deploymentStatusConfig[status].label}
-                    </span>
-                    <span className="font-medium">{deploymentCounts[status] ?? 0}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-
-        <div className={tileClass}>
-          <div className="flex items-center gap-2 text-zinc-500">
-            <Building2 size={16} />
-            <span className="text-xs uppercase tracking-wide">Vendors</span>
-          </div>
-          <p className="mt-2 text-2xl font-semibold">{vendorTotal}</p>
-          {vendorsNeedingAttention > 0 && (
-            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-              {vendorsNeedingAttention} need attention
-            </p>
-          )}
-          <Link href="/systems/vendors" className={`mt-1 inline-block text-xs ${subtleLinkClass}`}>
-            View vendors
-          </Link>
-        </div>
-      </div>
-
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <div className={tileClass}>
           <h2 className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -406,6 +351,61 @@ export default async function DashboardPage() {
               />
             ))}
           </ul>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={tileClass}>
+          <div className="flex items-center gap-2 text-zinc-500">
+            <Boxes size={16} />
+            <span className="text-xs uppercase tracking-wide">AI systems</span>
+          </div>
+          <p className="mt-2 text-2xl font-semibold">{totalActive}</p>
+          <Link href="/systems/inventory" className={`mt-1 inline-block text-xs ${subtleLinkClass}`}>
+            View inventory
+          </Link>
+        </div>
+
+        <div className={tileClass}>
+          <div className="flex items-center gap-2 text-zinc-500">
+            <ClipboardList size={16} />
+            <span className="text-xs uppercase tracking-wide">By deployment status</span>
+          </div>
+          <ul className="mt-2 flex flex-col gap-1 text-sm">
+            {(Object.keys(deploymentStatusConfig) as DeploymentStatus[]).map((status) => {
+              const Icon = deploymentStatusConfig[status].icon;
+              return (
+                <li key={status}>
+                  <Link
+                    href={`/systems/inventory?status=${status}`}
+                    className="flex items-center justify-between rounded hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
+                  >
+                    <span className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
+                      <Icon size={14} />
+                      {deploymentStatusConfig[status].label}
+                    </span>
+                    <span className="font-medium">{deploymentCounts[status] ?? 0}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        <div className={tileClass}>
+          <div className="flex items-center gap-2 text-zinc-500">
+            <Building2 size={16} />
+            <span className="text-xs uppercase tracking-wide">Vendors</span>
+          </div>
+          <p className="mt-2 text-2xl font-semibold">{vendorTotal}</p>
+          {vendorsNeedingAttention > 0 && (
+            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+              {vendorsNeedingAttention} need attention
+            </p>
+          )}
+          <Link href="/systems/vendors" className={`mt-1 inline-block text-xs ${subtleLinkClass}`}>
+            View vendors
+          </Link>
         </div>
       </div>
 
