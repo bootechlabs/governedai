@@ -11,6 +11,11 @@ export default async function SignInPage({
 
   return (
     <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
+      {/* Dark-mode-illegible wordmark — see src/app/systems/layout.tsx.
+          No dark-mode fallback needed here since the heading below already
+          names the product. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/brand/governedai-logo-lockup.png" alt="GovernedAI" className="mb-6 h-8 w-auto dark:hidden" />
       <h1 className="text-xl font-semibold tracking-tight">Sign in to GovernedAI</h1>
       <p className="mt-2 text-sm text-zinc-500">
         Enter your work email — we&apos;ll send a magic link.

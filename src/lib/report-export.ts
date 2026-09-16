@@ -1,4 +1,6 @@
 import PDFDocument from "pdfkit";
+import { readFileSync } from "fs";
+import { join } from "path";
 import type {
   AiSystem,
   AuditLogEntry,
@@ -155,31 +157,20 @@ function heading(doc: PDFKit.PDFDocument, text: string) {
   doc.moveDown(0.25);
 }
 
-// Same shield-and-checkmark mark as the governedai.co favicon, drawn as
-// native PDF vectors (not an embedded raster) so it stays crisp at any
-// size with no image asset or extra dependency. Shield = governance/
-// protection, checkmark = audit-passed — the mark already represents
-// what this report is for.
-const BRAND_GREEN = "#1F6F63";
-const BRAND_OFFWHITE = "#F6FAF9";
+// Read once per warm serverless instance, not once per report — the
+// actual robot-head mark (public/brand/governedai-mark-1024.png),
+// embedded as a raster rather than hand-vectored so it always matches
+// the real logo.
+let logoImage: Buffer | null = null;
+function getLogoImage(): Buffer {
+  if (!logoImage) {
+    logoImage = readFileSync(join(process.cwd(), "public", "brand", "governedai-mark-1024.png"));
+  }
+  return logoImage;
+}
 
 function drawLogo(doc: PDFKit.PDFDocument, x: number, y: number, size: number) {
-  const scale = size / 32;
-  doc.save();
-  doc.translate(x, y).scale(scale);
-  doc.roundedRect(0, 0, 32, 32, 6).fill(BRAND_GREEN);
-  doc
-    .path("M16 6l9 3.4v6.2c0 6.2-3.9 10.9-9 12.4-5.1-1.5-9-6.2-9-12.4V9.4L16 6z")
-    .lineWidth(2)
-    .lineJoin("round")
-    .stroke(BRAND_OFFWHITE);
-  doc
-    .path("M12 16.2l3 3 5.5-6")
-    .lineWidth(2)
-    .lineCap("round")
-    .lineJoin("round")
-    .stroke(BRAND_OFFWHITE);
-  doc.restore();
+  doc.image(getLogoImage(), x, y, { width: size, height: size });
 }
 
 export async function buildGovernanceReportPdf(input: GovernanceReportInput) {

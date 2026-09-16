@@ -20,7 +20,13 @@ export default async function PlatformLayout({ children }: { children: React.Rea
   return (
     <div>
       <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-3 text-sm dark:border-zinc-800">
-        <span className="font-medium">GovernedAI — Platform</span>
+        <div className="flex items-center gap-2">
+          {/* Dark-mode-illegible wordmark — see src/app/systems/layout.tsx */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/governedai-logo-lockup.png" alt="GovernedAI" className="h-6 w-auto dark:hidden" />
+          <span className="hidden font-medium dark:inline">GovernedAI</span>
+          <span className="font-medium text-zinc-500">— Platform</span>
+        </div>
         <div className="flex items-center gap-3 text-zinc-500">
           <Link href="/platform" className="inline-flex items-center gap-1.5 hover:underline">
             <LayoutDashboard size={15} />
