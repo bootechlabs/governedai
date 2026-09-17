@@ -41,6 +41,7 @@ import { ShareLinkForm } from "./share-link-form";
 import { RevokeShareLinkButton } from "./revoke-share-link-button";
 import { getCurrentUser } from "@/lib/current-user";
 import { canManageSystem, canDecideStage, canCreateSystem } from "@/lib/permissions";
+import { verifyAuditChain } from "@/lib/audit-log";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +94,10 @@ export default async function SystemDetailPage({
   });
 
   if (!system) notFound();
+
+  // Cheap enough to compute inline, only when the Audit tab is actually
+  // shown — no need for a client button/action for a read-only check.
+  const auditIntegrity = tab === "audit" ? await verifyAuditChain(system.id) : null;
 
   const vendors = await prisma.vendor.findMany({
     where: { organizationId: actor.organizationId },
@@ -761,6 +766,19 @@ export default async function SystemDetailPage({
 
       {tab === "audit" && (
       <div role="tabpanel">
+      {auditIntegrity && system.auditLog.length > 0 && (
+        <p
+          className={
+            auditIntegrity.verified
+              ? "mt-4 text-xs text-emerald-600 dark:text-emerald-400"
+              : "mt-4 text-xs text-red-600 dark:text-red-400"
+          }
+        >
+          {auditIntegrity.verified
+            ? `${auditIntegrity.entryCount} entries, hash-chained and verified intact.`
+            : `Integrity check failed for one or more of this system's ${auditIntegrity.entryCount} entries — contact support.`}
+        </p>
+      )}
       <div className="mt-4 flex justify-end gap-3 text-sm">
         <a
           href={`/systems/${system.id}/audit?format=csv`}

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import { buildAuditCsv, buildGovernanceReportPdf, slugifyFileName } from "@/lib/report-export";
+import { verifyAuditChain } from "@/lib/audit-log";
 
 export async function GET(
   request: NextRequest,
@@ -46,6 +47,7 @@ export async function GET(
     });
   }
 
+  const { verified, entryCount } = await verifyAuditChain(system.id);
   const pdf = await buildGovernanceReportPdf({
     system,
     riskClassification: system.riskClassification,
@@ -53,6 +55,7 @@ export async function GET(
     evidence: system.evidence,
     auditLog: system.auditLog,
     incidents: system.incidents,
+    auditIntegrity: { verified, entryCount },
   });
   return new NextResponse(new Uint8Array(pdf), {
     headers: {

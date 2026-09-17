@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { resolveShareLink } from "@/lib/share-links";
 import { buildGovernanceReportPdf, slugifyFileName } from "@/lib/report-export";
+import { verifyAuditChain } from "@/lib/audit-log";
 
 // Unauthenticated by design — the token itself is the access control (see
 // src/lib/share-links.ts). Not found/revoked/expired all read the same
@@ -36,6 +37,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   });
   if (!system) notFound();
 
+  const { verified, entryCount } = await verifyAuditChain(system.id);
   const pdf = await buildGovernanceReportPdf({
     system,
     riskClassification: system.riskClassification,
@@ -43,6 +45,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     evidence: system.evidence,
     auditLog: system.auditLog,
     incidents: system.incidents,
+    auditIntegrity: { verified, entryCount },
   });
 
   return new NextResponse(new Uint8Array(pdf), {

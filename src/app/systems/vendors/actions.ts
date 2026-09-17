@@ -44,6 +44,9 @@ export async function updateVendor(vendorId: string, formData: FormData) {
   const soc2ReportUrl = String(formData.get("soc2ReportUrl") ?? "").trim() || null;
   const modelCardUrl = String(formData.get("modelCardUrl") ?? "").trim() || null;
   const securityEvalUrl = String(formData.get("securityEvalUrl") ?? "").trim() || null;
+  const agentKillSwitchSupported = formData.get("agentKillSwitchSupported") === "on";
+  const agentPermissionScopingDocumented = formData.get("agentPermissionScopingDocumented") === "on";
+  const agentAuditLogExportSupported = formData.get("agentAuditLogExportSupported") === "on";
   const notes = String(formData.get("notes") ?? "").trim() || null;
   const attestationCadenceDays = Number(formData.get("attestationCadenceDays") ?? 365);
   if (!name) {
@@ -62,6 +65,9 @@ export async function updateVendor(vendorId: string, formData: FormData) {
       soc2ReportUrl,
       modelCardUrl,
       securityEvalUrl,
+      agentKillSwitchSupported,
+      agentPermissionScopingDocumented,
+      agentAuditLogExportSupported,
       notes,
       attestationCadenceDays,
     },

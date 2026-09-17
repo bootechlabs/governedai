@@ -89,6 +89,34 @@ export default async function VendorDetailPage({
           className={inputClass}
         />
 
+        <span className="text-xs font-medium text-zinc-500">
+          Agent platform (if this vendor&apos;s AI is agentic)
+        </span>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="agentKillSwitchSupported"
+            defaultChecked={vendor.agentKillSwitchSupported}
+          />
+          Exposes a kill-switch / access-revocation API
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="agentPermissionScopingDocumented"
+            defaultChecked={vendor.agentPermissionScopingDocumented}
+          />
+          Documents permission/access scoping
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            name="agentAuditLogExportSupported"
+            defaultChecked={vendor.agentAuditLogExportSupported}
+          />
+          Supports audit-log export
+        </label>
+
         <label className="text-xs font-medium text-zinc-500">Notes</label>
         <textarea name="notes" defaultValue={vendor.notes ?? ""} rows={3} className={inputClass} />
 

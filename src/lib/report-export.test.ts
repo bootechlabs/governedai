@@ -29,6 +29,8 @@ function fakeEntry(
     action: "system_created",
     detail: { name: "Test System" },
     occurredAt: new Date("2026-01-02T00:00:00.000Z"),
+    previousHash: null,
+    hash: null,
     aiSystemId: "system_1",
     actorId: "user_1",
     actor: fakeUser(),
@@ -149,6 +151,7 @@ describe("buildGovernanceReportPdf", () => {
     evidence: [],
     auditLog: [],
     incidents: [],
+    auditIntegrity: { verified: true, entryCount: 0 },
   };
 
   it("produces a real PDF (magic bytes) with no risk classification, stages, evidence, or audit log", async () => {

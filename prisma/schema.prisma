@@ -124,6 +124,12 @@ model Vendor {
   soc2ReportUrl             String?
   modelCardUrl              String?
   securityEvalUrl           String?
+  // Slice 16 — agent-platform posture, for vendors whose AI product is
+  // itself agentic. Plain booleans (default false), not a tri-state
+  // "unknown" — consistent with isAgentic/disclosedToPatient elsewhere.
+  agentKillSwitchSupported        Boolean @default(false)
+  agentPermissionScopingDocumented Boolean @default(false)
+  agentAuditLogExportSupported    Boolean @default(false)
   notes                     String?
   // Re-attestation tracking (slice 10) — lastAttestedAt null means "never
   // tracked," not "overdue," so shipping this doesn't retroactively flag
@@ -503,11 +509,18 @@ model ApiKey {
 }
 
 // Immutable by convention: application code must only insert, never update/delete rows here.
+// Slice 16 — hash and previousHash turn that convention into something
+// verifiable, not just asserted. Chained per AiSystem (see
+// src/lib/audit-log.ts logAuditEntry/verifyAuditChain), nullable because
+// rows from before this shipped are backfilled once by
+// prisma/backfill-audit-hashes.ts rather than required at the DB level.
 model AuditLogEntry {
-  id         String   @id @default(cuid())
-  action     String
-  detail     Json?
-  occurredAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  action       String
+  detail       Json?
+  occurredAt   DateTime @default(now())
+  previousHash String?
+  hash         String?
 
   aiSystem   AiSystem @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
   aiSystemId String

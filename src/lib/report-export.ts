@@ -154,6 +154,22 @@ export interface GovernanceReportInput {
   }[];
   auditLog: AuditEntryWithActor[];
   incidents: (Incident & { reportedBy: User; resolvedBy: User | null })[];
+  // Slice 16 — precomputed by the caller (verifyAuditChain in
+  // src/lib/audit-log.ts), not recomputed here, since this function is
+  // otherwise pure formatting over already-fetched data.
+  auditIntegrity: { verified: boolean; entryCount: number };
+}
+
+// Slice 16 — Baylor's three board-level litmus questions, answered from
+// this system's agentic-assessment answers (see AGENTIC_QUESTIONS in
+// risk-classification.ts) rather than new data. 0/1 -> Yes/Partial,
+// 2/3 -> No; missing/non-agentic -> "Not assessed".
+function litmusStatus(answers: Record<string, unknown> | null, key: string): string {
+  const raw = answers?.[key];
+  if (typeof raw !== "number") return "Not assessed";
+  if (raw === 0) return "Yes";
+  if (raw === 1) return "Partial";
+  return "No";
 }
 
 const incidentCategoryLabels: Record<IncidentCategory, string> = Object.fromEntries(
@@ -190,7 +206,7 @@ function drawLogo(doc: PDFKit.PDFDocument, x: number, y: number, size: number) {
 }
 
 export async function buildGovernanceReportPdf(input: GovernanceReportInput) {
-  const { system, riskClassification, stages, evidence, auditLog, incidents } = input;
+  const { system, riskClassification, stages, evidence, auditLog, incidents, auditIntegrity } = input;
   const doc = new PDFDocument({ margin: 50 });
   const chunks: Buffer[] = [];
   doc.on("data", (chunk) => chunks.push(chunk));
@@ -222,6 +238,36 @@ export async function buildGovernanceReportPdf(input: GovernanceReportInput) {
   }
   if (system.description) {
     doc.moveDown(0.25).fontSize(10).fillColor("#333").text(system.description);
+  }
+
+  // --- Board litmus check (slice 16) — a headline section, ahead of
+  // Risk Classification, for any agentic-flagged system with a scored
+  // agentic assessment. Answered from that assessment's own answers, not
+  // new data. ---
+  if (system.isAgentic && riskClassification?.agenticRiskTier) {
+    const answers = riskClassification.answers as Record<string, unknown>;
+    heading(doc, "Board Litmus Check — Agentic AI Governance");
+    doc
+      .fontSize(10)
+      .fillColor("#333")
+      .text(`Can this agent's identity be enumerated right now? ${litmusStatus(answers, "agentIdentityDistinct")}`);
+    doc
+      .fontSize(10)
+      .fillColor("#333")
+      .text(
+        `Can this agent's actions be traced/monitored for deviation? ${litmusStatus(answers, "agentBehaviorConstrained")}`,
+      );
+    doc
+      .fontSize(10)
+      .fillColor("#333")
+      .text(`Can this agent's access be revoked within minutes? ${litmusStatus(answers, "agentFailureResponseReady")}`);
+    doc
+      .moveDown(0.25)
+      .fontSize(8)
+      .fillColor("#999")
+      .text(
+        "Structuring device based on Baylor University Hankamer School of Business's three board-level litmus questions for agentic AI governance — derived from this system's agentic assessment answers below.",
+      );
   }
 
   // --- Risk classification ---
@@ -447,6 +493,17 @@ export async function buildGovernanceReportPdf(input: GovernanceReportInput) {
     }
     doc.moveDown(0.25);
   });
+  if (auditLog.length > 0) {
+    doc
+      .moveDown(0.1)
+      .fontSize(8)
+      .fillColor(auditIntegrity.verified ? "#0a7a0a" : "#a83232")
+      .text(
+        auditIntegrity.verified
+          ? `${auditIntegrity.entryCount} entries, sequentially hash-chained for tamper-evidence — verified intact at export. Retained indefinitely; entries are immutable and never modified after creation.`
+          : `Integrity check failed for one or more of this system's ${auditIntegrity.entryCount} audit log entries — contact support.`,
+      );
+  }
 
   doc.end();
   return done;
