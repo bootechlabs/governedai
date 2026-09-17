@@ -38,6 +38,7 @@ function parseAiSystemFields(formData: FormData) {
       formData.get("deploymentStatus") ?? "PLANNED",
     ) as DeploymentStatus,
     statesDeployed: formData.getAll("statesDeployed").map((v) => String(v)),
+    isAgentic: formData.get("isAgentic") === "on",
   };
 }
 

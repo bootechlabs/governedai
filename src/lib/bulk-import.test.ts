@@ -55,6 +55,7 @@ describe("validateImportRow", () => {
       classification: "CONFIDENTIAL",
       deploymentStatus: "PILOT",
       statesDeployed: ["AL"],
+      isAgentic: false,
     });
   });
 

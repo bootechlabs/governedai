@@ -12,6 +12,8 @@ import {
   getSecondaryQuestions,
   computeRiskClassification,
   computeSecondaryRiskTiers,
+  computeAgenticRiskTier,
+  AGENTIC_QUESTIONS,
 } from "@/lib/risk-classification";
 import type { UseCaseTemplate } from "@prisma/client";
 
@@ -29,7 +31,8 @@ export async function submitRiskAssessment(aiSystemId: string, formData: FormDat
   }
 
   const answers: Record<string, number> = {};
-  for (const question of [...questions, ...getSecondaryQuestions(template)]) {
+  const agenticQuestions = system.isAgentic ? AGENTIC_QUESTIONS : [];
+  for (const question of [...questions, ...getSecondaryQuestions(template), ...agenticQuestions]) {
     const raw = formData.get(question.key);
     const weight = Number(raw);
     if (raw === null || Number.isNaN(weight)) {
@@ -50,6 +53,7 @@ export async function submitRiskAssessment(aiSystemId: string, formData: FormDat
     regulations,
   );
   const { lifeSafetyTier, techDataTier } = computeSecondaryRiskTiers(template, answers);
+  const agenticRiskTier = computeAgenticRiskTier(system.isAgentic, answers);
 
   await prisma.$transaction(async (tx) => {
     const riskClassification = await tx.riskClassification.upsert({
@@ -61,6 +65,7 @@ export async function submitRiskAssessment(aiSystemId: string, formData: FormDat
         riskTier,
         lifeSafetyTier,
         techDataTier,
+        agenticRiskTier,
         completedById: actor.id,
       },
       update: {
@@ -69,6 +74,7 @@ export async function submitRiskAssessment(aiSystemId: string, formData: FormDat
         riskTier,
         lifeSafetyTier,
         techDataTier,
+        agenticRiskTier,
         completedById: actor.id,
         completedAt: new Date(),
       },

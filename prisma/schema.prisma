@@ -92,6 +92,8 @@ enum EvidenceCategory {
   POLICY_DOCUMENT
   SUBPROCESSOR_LIST
   SECURITY_EVALUATION
+  OVERRIDE_REVOCATION_PROCEDURE
+  ACCESS_LIFECYCLE_POLICY
   OTHER
 }
 
@@ -215,6 +217,10 @@ model AiSystem {
   // Edit-form-only, same as description (not in the compact inventory
   // quick-add row).
   statesDeployed   String[]
+  // Slice 15 — gates the agentic-governance question block on the risk
+  // assessment (see AGENTIC_QUESTIONS in src/lib/risk-classification.ts).
+  // Edit-form-only, same as statesDeployed.
+  isAgentic        Boolean            @default(false)
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   archivedAt       DateTime?
@@ -354,6 +360,11 @@ model RiskClassification {
   // certification/proprietary framework.
   lifeSafetyTier       RiskTier?
   techDataTier         RiskTier?
+  // Slice 15 — unlike the two above, this one DOES cite an external
+  // framework (Baylor Hankamer School of Business's five governance
+  // dimensions) in its UI/PDF disclaimer. Null when AiSystem.isAgentic
+  // was false at assessment time — nothing to score.
+  agenticRiskTier      RiskTier?
   // Deprecated as of the dynamic regulation engine (see RegulationDefinition
   // below) — left in place, unused by app code, as a one-release safety net
   // against a backfill mistake rather than dropped immediately.

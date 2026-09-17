@@ -290,6 +290,21 @@ export async function buildGovernanceReportPdf(input: GovernanceReportInput) {
         .text("GovernedAI's own risk lens — not derived from or aligned to any external certification or proprietary framework.");
     }
 
+    // --- Agentic AI governance assessment (slice 15) — unlike the
+    // section above, this one DOES cite an external framework. Only
+    // rendered when the system was flagged agentic and scored. ---
+    if (system.isAgentic && riskClassification.agenticRiskTier) {
+      heading(doc, "Agentic AI Governance Assessment");
+      doc.fontSize(10).fillColor("#333").text(`Agentic governance tier: ${riskClassification.agenticRiskTier}`);
+      doc
+        .moveDown(0.25)
+        .fontSize(8)
+        .fillColor("#999")
+        .text(
+          "Built on Baylor University Hankamer School of Business's five governance dimensions for agentic AI systems (Identity, Behavior, Data Boundaries, Access Scope, Failure Response).",
+        );
+    }
+
     // --- Suggested accountability (slice 11) — a heuristic bootstrap from
     // the use case alone, not per-answer. Advisory only. ---
     heading(doc, "Suggested Accountability");

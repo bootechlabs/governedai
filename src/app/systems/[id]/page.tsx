@@ -329,6 +329,10 @@ export default async function SystemDetailPage({
                     </select>
                   </div>
                 </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="isAgentic" defaultChecked={system.isAgentic} />
+                  This AI system takes autonomous multi-step actions (agentic)
+                </label>
               </div>
 
               {trackedStates.length > 0 && (
@@ -437,6 +441,19 @@ export default async function SystemDetailPage({
               <span className="text-xs text-zinc-400">
                 GovernedAI&apos;s own supplementary risk lens — not derived from any external
                 certification or proprietary framework.
+              </span>
+            </div>
+          )}
+          {system.isAgentic && system.riskClassification.agenticRiskTier && (
+            <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+              <span className="flex items-center gap-1.5 text-xs text-zinc-500">
+                Agentic AI governance
+                <RiskTierBadge value={system.riskClassification.agenticRiskTier} />
+              </span>
+              <span className="text-xs text-zinc-400">
+                Built on Baylor University Hankamer School of Business&apos;s five agentic-AI
+                governance dimensions (Identity, Behavior, Data Boundaries, Access Scope, Failure
+                Response).
               </span>
             </div>
           )}

@@ -16,6 +16,7 @@ export function serializeAiSystem(system: AiSystem) {
     classification: system.classification,
     deploymentStatus: system.deploymentStatus,
     statesDeployed: system.statesDeployed,
+    isAgentic: system.isAgentic,
     createdAt: system.createdAt.toISOString(),
     updatedAt: system.updatedAt.toISOString(),
     archivedAt: system.archivedAt?.toISOString() ?? null,

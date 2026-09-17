@@ -329,6 +329,69 @@ export function getQuestionsForTemplate(template: UseCaseTemplate): RiskQuestion
   return [...CORE_QUESTIONS, ...TEMPLATE_QUESTIONS[template]];
 }
 
+// Slice 15 — gated to AiSystem.isAgentic (a checkbox, not a template),
+// so gating lives at the call sites as a plain boolean check rather than
+// a per-template getter like getTechDataQuestions above. Built directly
+// on Baylor University's Hankamer School of Business five governance
+// dimensions for agentic AI (Identity, Behavior, Data Boundaries, Access
+// Scope, Failure Response) — cite that source wherever these are shown,
+// unlike LIFE_SAFETY_QUESTIONS/TECH_DATA_QUESTIONS above, which are
+// original. The "Identity" question below is deliberately NOT about
+// AiSystem.owner (already a required linked User, not free text) — it's
+// about whether the agent itself has a distinct, traceable identity.
+export const AGENTIC_QUESTIONS: RiskQuestion[] = [
+  {
+    key: "agentIdentityDistinct",
+    text: "Does this agent have a unique, traceable identity/credential distinct from a shared or generic service account?",
+    options: [
+      { label: "Yes, dedicated and actively monitored", weight: 0 },
+      { label: "Yes, dedicated but not actively monitored", weight: 1 },
+      { label: "Shares a credential with other systems", weight: 2 },
+      { label: "No distinct identity — fully anonymous execution", weight: 3 },
+    ],
+  },
+  {
+    key: "agentBehaviorConstrained",
+    text: "How are this agent's actions constrained and monitored for deviation from its authorized scope?",
+    options: [
+      { label: "Explicit allow-list of actions, with automated deviation alerts", weight: 0 },
+      { label: "Explicit allow-list of actions, manually reviewed", weight: 1 },
+      { label: "General guidelines only, not technically enforced", weight: 2 },
+      { label: "No defined action boundaries", weight: 3 },
+    ],
+  },
+  {
+    key: "agentDataBoundaryScoped",
+    text: "Is this agent's data access scoped narrowly to what the task needs, or does it inherit broader access?",
+    options: [
+      { label: "Narrowly scoped to only what this task needs", weight: 0 },
+      { label: "Scoped to a broader but still limited data category", weight: 1 },
+      { label: "Inherits the owner's full data access", weight: 2 },
+      { label: "Unrestricted or undocumented data access", weight: 3 },
+    ],
+  },
+  {
+    key: "agentAccessScopeExpiring",
+    text: "Is this agent's system/API access scoped to this specific task with a defined expiration, or does it persist indefinitely?",
+    options: [
+      { label: "Task-scoped, with a defined expiration or removal point", weight: 0 },
+      { label: "Task-scoped, but no expiration defined", weight: 1 },
+      { label: "Broader than this task, but still bounded", weight: 2 },
+      { label: "Persists indefinitely with no review", weight: 3 },
+    ],
+  },
+  {
+    key: "agentFailureResponseReady",
+    text: "Is there a documented, tested containment/recovery (\"kill-switch\") procedure with a named override authority?",
+    options: [
+      { label: "Documented, tested, with a named owner", weight: 0 },
+      { label: "Documented but untested", weight: 1 },
+      { label: "Informal/ad hoc process only", weight: 2 },
+      { label: "No containment procedure exists", weight: 3 },
+    ],
+  },
+];
+
 const TIER_THRESHOLDS: { max: number; tier: RiskTier }[] = [
   { max: 25, tier: "LOW" },
   { max: 50, tier: "MODERATE" },
@@ -359,6 +422,16 @@ export function computeSecondaryRiskTiers(
     lifeSafetyTier: scoreQuestions(LIFE_SAFETY_QUESTIONS, answers),
     techDataTier: scoreQuestions(getTechDataQuestions(template), answers),
   };
+}
+
+// Null when the system isn't agentic — no questions were asked, so
+// there's nothing to score (distinct from a LOW score, which would imply
+// the dimensions were evaluated and came back well-governed).
+export function computeAgenticRiskTier(
+  isAgentic: boolean,
+  answers: Record<string, number>,
+): RiskTier | null {
+  return isAgentic ? scoreQuestions(AGENTIC_QUESTIONS, answers) : null;
 }
 
 // A regulation is a RegulationDefinition row (see prisma/schema.prisma),

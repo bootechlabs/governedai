@@ -146,6 +146,8 @@ export const evidenceCategoryLabels: Record<EvidenceCategory, string> = {
   POLICY_DOCUMENT: "Policy document",
   SUBPROCESSOR_LIST: "Subprocessor list",
   SECURITY_EVALUATION: "Security evaluation",
+  OVERRIDE_REVOCATION_PROCEDURE: "Override/revocation procedure",
+  ACCESS_LIFECYCLE_POLICY: "Access lifecycle/expiration policy",
   OTHER: "Other",
 };
 

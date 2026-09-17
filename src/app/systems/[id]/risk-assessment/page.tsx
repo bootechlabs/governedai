@@ -7,6 +7,7 @@ import { primaryButtonClass, subtleLinkClass } from "@/lib/ui";
 import {
   getQuestionsForTemplate,
   getSecondaryQuestions,
+  AGENTIC_QUESTIONS,
   USE_CASE_TEMPLATE_LABELS,
   type RiskQuestion,
 } from "@/lib/risk-classification";
@@ -159,6 +160,29 @@ export default async function RiskAssessmentPage({
             existingAnswers={existingAnswers}
           />
         ))}
+
+        {system.isAgentic && (
+          <>
+            <div className="border-t border-zinc-200 pt-6 dark:border-zinc-800">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                Agentic AI governance assessment
+              </h2>
+              <p className="mt-1 text-xs text-zinc-500">
+                Built on Baylor University Hankamer School of Business&apos;s five governance
+                dimensions for agentic AI systems.
+              </p>
+            </div>
+            {AGENTIC_QUESTIONS.map((question, i) => (
+              <QuestionFieldset
+                key={question.key}
+                question={question}
+                index={i}
+                total={AGENTIC_QUESTIONS.length}
+                existingAnswers={existingAnswers}
+              />
+            ))}
+          </>
+        )}
 
         <button type="submit" className={`self-start ${primaryButtonClass}`}>
           Submit assessment

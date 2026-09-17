@@ -22,6 +22,7 @@ export interface AiSystemFieldInput {
   classification: DataClassification;
   deploymentStatus: DeploymentStatus;
   statesDeployed: string[];
+  isAgentic: boolean;
 }
 
 // Accepts either a real array (public API JSON body) or a comma-separated
@@ -29,6 +30,13 @@ export interface AiSystemFieldInput {
 // idea as normalizeEnum above, but states aren't a closed enum here (a
 // state with no tracked law yet is still a valid code), so this just
 // normalizes casing/whitespace rather than validating against a fixed list.
+// Loose boolean parsing — same "a human is typing this by hand" tolerance
+// as normalizeEnum below (a spreadsheet cell or JSON body might say
+// "true", "TRUE", "yes", or "1"; anything else, including absent, is false).
+function parseLooseBoolean(raw: unknown): boolean {
+  return ["true", "yes", "1"].includes(String(raw ?? "").trim().toLowerCase());
+}
+
 function parseStatesDeployed(raw: unknown): string[] {
   if (raw === undefined || raw === null || raw === "") return [];
   const values = Array.isArray(raw) ? raw : String(raw).split(",");
@@ -74,5 +82,6 @@ export function parseAiSystemFieldInput(raw: Record<string, unknown>): AiSystemF
       "Deployment status",
     ),
     statesDeployed: parseStatesDeployed(raw.statesDeployed),
+    isAgentic: parseLooseBoolean(raw.isAgentic),
   };
 }

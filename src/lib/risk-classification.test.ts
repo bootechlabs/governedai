@@ -4,11 +4,13 @@ import {
   getTechDataQuestions,
   computeRiskClassification,
   computeSecondaryRiskTiers,
+  computeAgenticRiskTier,
   getTrackedStates,
   CORE_QUESTIONS,
   LIFE_SAFETY_QUESTIONS,
   TECH_DATA_QUESTIONS,
   ADVERSARIAL_TESTING_QUESTION,
+  AGENTIC_QUESTIONS,
   type RegulationTriggerInput,
 } from "./risk-classification";
 
@@ -215,5 +217,22 @@ describe("computeSecondaryRiskTiers", () => {
     const nonGated = computeSecondaryRiskTiers("AMBIENT_SCRIBE", answers);
     expect(gated.techDataTier).toBe("HIGH");
     expect(nonGated.techDataTier).toBe("CRITICAL");
+  });
+});
+
+describe("computeAgenticRiskTier", () => {
+  it("returns null when the system isn't agentic, regardless of answers", () => {
+    const allMax = Object.fromEntries(AGENTIC_QUESTIONS.map((q) => [q.key, 3]));
+    expect(computeAgenticRiskTier(false, allMax)).toBeNull();
+    expect(computeAgenticRiskTier(false, {})).toBeNull();
+  });
+
+  it("scores LOW when every agentic question is answered 0", () => {
+    expect(computeAgenticRiskTier(true, {})).toBe("LOW");
+  });
+
+  it("scores CRITICAL when every agentic question is maxed", () => {
+    const allMax = Object.fromEntries(AGENTIC_QUESTIONS.map((q) => [q.key, 3]));
+    expect(computeAgenticRiskTier(true, allMax)).toBe("CRITICAL");
   });
 });
