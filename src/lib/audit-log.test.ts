@@ -1,32 +1,22 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { createHash } from "crypto";
 
-const GENESIS_HASH = "0".repeat(64);
+import { GENESIS_HASH, computeEntryHash } from "./audit-hash";
 
-// Pure re-implementation of computeEntryHash's algorithm, kept in sync by
-// the tests below asserting against real logAuditEntry/verifyAuditChain
-// output rather than this copy independently — this is just the fixture
-// builder, not a second source of truth for the hashing scheme.
-function hashOf(input: {
-  previousHash: string;
-  aiSystemId: string;
-  actorId: string;
-  action: string;
-  detail: unknown;
-  occurredAt: Date;
-}): string {
-  return createHash("sha256")
-    .update(
-      JSON.stringify({
-        previousHash: input.previousHash,
-        aiSystemId: input.aiSystemId,
-        actorId: input.actorId,
-        action: input.action,
-        detail: input.detail ?? null,
-        occurredAt: input.occurredAt.toISOString(),
-      }),
-    )
-    .digest("hex");
+// Postgres jsonb does not preserve object key order: it stores keys sorted by
+// length, then bytewise. The fake DB must do the same on write — without it a
+// test can't see any bug that depends on key order (which is exactly how the
+// first version of the hash chain shipped broken for multi-key details).
+function jsonbNormalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(jsonbNormalize);
+  if (value !== null && typeof value === "object") {
+    const source = value as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.keys(source)
+        .sort((a, b) => a.length - b.length || (a < b ? -1 : a > b ? 1 : 0))
+        .map((key) => [key, jsonbNormalize(source[key])]),
+    );
+  }
+  return value;
 }
 
 // In-memory fake of the two Prisma calls verifyAuditChain/logAuditEntry
@@ -59,7 +49,7 @@ vi.mock("@/lib/prisma", () => ({
       create: vi.fn(async ({ data }: { data: Omit<(typeof rows)[number], "id"> }) => {
         // Real Prisma auto-generates id via @default(cuid()) — this fake
         // needs to do the same, since logAuditEntry never supplies one.
-        const row = { id: `entry_${rows.length + 1}`, ...data };
+        const row = { id: `entry_${rows.length + 1}`, ...data, detail: jsonbNormalize(data.detail) };
         rows.push(row);
         return row;
       }),
@@ -83,7 +73,7 @@ describe("audit log hash chaining", () => {
     });
     expect(entry.previousHash).toBe(GENESIS_HASH);
     expect(entry.hash).toBe(
-      hashOf({
+      computeEntryHash({
         previousHash: GENESIS_HASH,
         aiSystemId: "system_1",
         actorId: "user_1",
@@ -124,6 +114,35 @@ describe("audit log hash chaining", () => {
 
     const result = await verifyAuditChain("system_1");
     expect(result).toEqual({ verified: true, entryCount: 3, brokenAtId: null });
+  });
+
+  it("verifies a chain whose details have multiple keys (jsonb reorders them on the way in)", async () => {
+    // Insertion order differs from jsonb's stored order (length, then bytewise).
+    const detail = { stageName: "Intake", stageId: "abc", status: "APPROVED", rationale: "ok" };
+    await logAuditEntry({ aiSystemId: "system_1", actorId: "user_1", action: "stage_transitioned", detail });
+    await logAuditEntry({
+      aiSystemId: "system_1",
+      actorId: "user_1",
+      action: "system_updated",
+      detail: { before: { name: "a", vendorName: "b" }, after: { vendorName: "c", name: "a" }, source: "api" },
+    });
+
+    expect(Object.keys(rows[0].detail as object)).not.toEqual(Object.keys(detail)); // the fake really reordered
+    expect(await verifyAuditChain("system_1")).toEqual({ verified: true, entryCount: 2, brokenAtId: null });
+  });
+
+  it("detects tampering with a value inside a multi-key detail", async () => {
+    await logAuditEntry({
+      aiSystemId: "system_1",
+      actorId: "user_1",
+      action: "stage_transitioned",
+      detail: { stageName: "Intake", stageId: "abc", status: "REJECTED", rationale: "no" },
+    });
+    (rows[0].detail as Record<string, unknown>).status = "APPROVED";
+
+    const result = await verifyAuditChain("system_1");
+    expect(result.verified).toBe(false);
+    expect(result.brokenAtId).toBe(rows[0].id);
   });
 
   it("detects tampering with a historical entry's content", async () => {

@@ -1,45 +1,29 @@
-// One-time data migration: computes hash and previousHash retroactively
-// for every existing AuditLogEntry row, per AiSystem, oldest first — see
-// src/lib/audit-log.ts for the chaining scheme this establishes going
-// forward. All the data needed (aiSystemId, actorId, action, detail,
-// occurredAt) already exists on every historical row, so the full chain
-// can be reconstructed exactly as if it had been chained from the start.
-// Idempotent — skips any entry that already has a hash, so re-running
-// (e.g. after a partial run) is safe. Run once per environment (local,
-// then production), after `prisma migrate deploy`:
-//   pnpm exec tsx prisma/backfill-audit-hashes.ts
+// Computes hash and previousHash for AuditLogEntry rows, per AiSystem, oldest
+// first — see src/lib/audit-log.ts for the chaining scheme. All the data
+// needed (aiSystemId, actorId, action, detail, occurredAt) already exists on
+// every historical row, so the full chain can be reconstructed exactly as if
+// it had been chained from the start. Run after `prisma migrate deploy`:
+//
+//   pnpm exec tsx prisma/backfill-audit-hashes.ts            # chain rows that have no hash yet
+//   pnpm exec tsx prisma/backfill-audit-hashes.ts --rehash   # recompute EVERY row's hash
+//
+// --rehash is needed once per environment after the scheme fix that made
+// hashing independent of JSON key order (Postgres jsonb reorders keys, so the
+// first version hashed a different string at verify time than at write time
+// for any multi-key detail). It rewrites hashes, so it re-baselines the
+// chain's tamper-evidence at the moment it runs — the same trust boundary the
+// original backfill already had. Both modes are idempotent.
 import { PrismaClient } from "@prisma/client";
-import { createHash } from "crypto";
+import { GENESIS_HASH, computeEntryHash } from "../src/lib/audit-hash";
 
 const prisma = new PrismaClient();
-const GENESIS_HASH = "0".repeat(64);
-
-function computeEntryHash(input: {
-  previousHash: string;
-  aiSystemId: string;
-  actorId: string;
-  action: string;
-  detail: unknown;
-  occurredAt: Date;
-}): string {
-  return createHash("sha256")
-    .update(
-      JSON.stringify({
-        previousHash: input.previousHash,
-        aiSystemId: input.aiSystemId,
-        actorId: input.actorId,
-        action: input.action,
-        detail: input.detail ?? null,
-        occurredAt: input.occurredAt.toISOString(),
-      }),
-    )
-    .digest("hex");
-}
+const rehash = process.argv.includes("--rehash");
 
 async function main() {
   const systems = await prisma.aiSystem.findMany({ select: { id: true } });
 
-  let chained = 0;
+  let written = 0;
+  let changed = 0;
   let skipped = 0;
   for (const system of systems) {
     const entries = await prisma.auditLogEntry.findMany({
@@ -49,7 +33,7 @@ async function main() {
 
     let previousHash = GENESIS_HASH;
     for (const entry of entries) {
-      if (entry.hash) {
+      if (entry.hash && !rehash) {
         previousHash = entry.hash;
         skipped++;
         continue;
@@ -62,16 +46,22 @@ async function main() {
         detail: entry.detail,
         occurredAt: entry.occurredAt,
       });
-      await prisma.auditLogEntry.update({
-        where: { id: entry.id },
-        data: { previousHash, hash },
-      });
+      if (hash !== entry.hash || previousHash !== entry.previousHash) {
+        await prisma.auditLogEntry.update({
+          where: { id: entry.id },
+          data: { previousHash, hash },
+        });
+        changed++;
+      }
       previousHash = hash;
-      chained++;
+      written++;
     }
   }
 
-  console.log(`Backfilled ${chained} entries across ${systems.length} systems (${skipped} already chained).`);
+  console.log(
+    `${rehash ? "Rehashed" : "Backfilled"} ${written} entries across ${systems.length} systems ` +
+      `(${changed} rewritten, ${skipped} already chained and left alone).`,
+  );
 }
 
 main()

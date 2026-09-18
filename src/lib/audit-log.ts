@@ -1,33 +1,6 @@
-import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
+import { GENESIS_HASH, computeEntryHash } from "@/lib/audit-hash";
 import type { Prisma } from "@prisma/client";
-
-// Genesis hash for the first entry in a system's chain — 64 zeros, same
-// length as a real sha256 hex digest so nothing downstream has to special
-// case it.
-const GENESIS_HASH = "0".repeat(64);
-
-function computeEntryHash(input: {
-  previousHash: string;
-  aiSystemId: string;
-  actorId: string;
-  action: string;
-  detail: unknown;
-  occurredAt: Date;
-}): string {
-  return createHash("sha256")
-    .update(
-      JSON.stringify({
-        previousHash: input.previousHash,
-        aiSystemId: input.aiSystemId,
-        actorId: input.actorId,
-        action: input.action,
-        detail: input.detail ?? null,
-        occurredAt: input.occurredAt.toISOString(),
-      }),
-    )
-    .digest("hex");
-}
 
 // Every mutation in src/app/systems/actions.ts writes one of these —
 // centralized so the shape (and the "insert-only, never edit" contract
