@@ -107,7 +107,8 @@ export default async function ApiDocsPage() {
         <code>PUT /api/v1/ai-systems/:id</code> — full replace, same fields and defaults as
         registering one, so any optional field you omit (including <code>statesDeployed</code>{" "}
         and <code>isAgentic</code>) resets to its default. A change to <code>vendorName</code>, <code>classification</code>,{" "}
-        <code>deploymentStatus</code>, <code>businessUnit</code>, or <code>statesDeployed</code> is
+        <code>deploymentStatus</code>, <code>businessUnit</code>, <code>statesDeployed</code>, or{" "}
+        <code>isAgentic</code> is
         logged and can trigger recertification, same as editing it in the UI.
       </p>
       <pre className={codeClass}>

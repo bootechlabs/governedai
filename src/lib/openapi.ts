@@ -142,7 +142,7 @@ export function buildOpenApiSpec(serverUrl: string) {
           operationId: "updateAiSystem",
           summary: "Update an AI system",
           description:
-            "**Full replace**, not a partial update: same fields and defaults as registering a system, so any optional field you omit — including `statesDeployed` and `isAgentic` — resets to its default. A change to `vendorName`, `classification`, `deploymentStatus`, `businessUnit`, or `statesDeployed` is logged and can trigger recertification, same as editing it in the UI.",
+            "**Full replace**, not a partial update: same fields and defaults as registering a system, so any optional field you omit — including `statesDeployed` and `isAgentic` — resets to its default. A change to `vendorName`, `classification`, `deploymentStatus`, `businessUnit`, `statesDeployed`, or `isAgentic` is logged and can trigger recertification, same as editing it in the UI.",
           requestBody: {
             required: true,
             content: {

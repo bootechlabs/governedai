@@ -137,6 +137,16 @@ export default async function SystemDetailPage({
     if (!system.riskClassification) {
       actionItems.push({ label: "No risk assessment has been run yet", tab: "risk" });
     }
+    // Flagged agentic after its assessment was already run (isAgentic is
+    // edited separately from the questionnaire), so the agentic questions
+    // were never asked. With no assessment at all, the item above already
+    // covers it — running one asks them.
+    if (system.isAgentic && system.riskClassification && !system.riskClassification.agenticRiskTier) {
+      actionItems.push({
+        label: "Marked agentic — agentic governance assessment not completed",
+        tab: "risk",
+      });
+    }
     const pendingStageCount = system.stages.filter((s) => isStageActionable(s.status)).length;
     if (pendingStageCount > 0) {
       actionItems.push({

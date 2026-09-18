@@ -10,7 +10,7 @@ import { logAuditEntry } from "@/lib/audit-log";
 import { createAiSystemRecord, assertSystemEditable, resolveVendorId } from "@/lib/ai-systems";
 import { canCreateSystem, canManageSystem, canDecideStage } from "@/lib/permissions";
 import { requiresRationale } from "@/lib/workflow";
-import { detectChanges, serializeStatesDeployed } from "@/lib/change-events";
+import { detectChanges, keyChangeValues } from "@/lib/change-events";
 import { generateShareToken, SHARE_LINK_DURATIONS_DAYS } from "@/lib/share-links";
 import type {
   DataClassification,
@@ -84,27 +84,13 @@ export async function updateAiSystem(aiSystemId: string, formData: FormData) {
         classification: before.classification,
         deploymentStatus: before.deploymentStatus,
         statesDeployed: before.statesDeployed,
+        isAgentic: before.isAgentic,
       },
       after: fields,
     },
   });
 
-  const changes = detectChanges(
-    {
-      vendorName: before.vendorName,
-      classification: before.classification,
-      deploymentStatus: before.deploymentStatus,
-      businessUnit: before.businessUnit,
-      statesDeployed: serializeStatesDeployed(before.statesDeployed),
-    },
-    {
-      vendorName: fields.vendorName,
-      classification: fields.classification,
-      deploymentStatus: fields.deploymentStatus,
-      businessUnit: fields.businessUnit,
-      statesDeployed: serializeStatesDeployed(fields.statesDeployed),
-    },
-  );
+  const changes = detectChanges(keyChangeValues(before), keyChangeValues(fields));
   if (changes.length > 0) {
     await prisma.changeEvent.createMany({
       data: changes.map((change) => ({
