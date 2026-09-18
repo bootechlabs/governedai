@@ -4,7 +4,6 @@ import {
   ShieldAlert,
   Building2,
   ClipboardList,
-  Activity,
   Siren,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -129,7 +128,6 @@ export default async function DashboardPage() {
     stageSystems,
     archivedCount,
     openIncidentCount,
-    recentActivity,
   ] = await Promise.all([
     prisma.aiSystem.count({ where: activeFilter }),
     prisma.aiSystem.groupBy({ by: ["deploymentStatus"], where: activeFilter, _count: true }),
@@ -159,12 +157,6 @@ export default async function DashboardPage() {
     }),
     prisma.aiSystem.count({ where: { organizationId: orgId, archivedAt: { not: null } } }),
     prisma.incident.count({ where: { resolvedAt: null, aiSystem: activeFilter } }),
-    prisma.auditLogEntry.findMany({
-      where: { aiSystem: { organizationId: orgId } },
-      include: { actor: true, aiSystem: { select: { id: true, name: true } } },
-      orderBy: { occurredAt: "desc" },
-      take: 5,
-    }),
   ]);
 
   const deploymentCounts = Object.fromEntries(
@@ -263,7 +255,7 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-5xl px-6 py-12">
       <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <div className={tileClass}>
           <h2 className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
             <ShieldAlert size={16} className="text-zinc-500" />
@@ -355,7 +347,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <div className={tileClass}>
           <div className="flex items-center gap-2 text-zinc-500">
             <Boxes size={16} />
@@ -409,23 +401,6 @@ export default async function DashboardPage() {
           </Link>
         </div>
       </div>
-
-      <h2 className="mt-10 flex items-center gap-2 text-lg font-medium">
-        <Activity size={18} />
-        Recent activity
-      </h2>
-      <ul className="mt-4 flex flex-col gap-2 text-sm">
-        {recentActivity.length === 0 && <li className="text-zinc-500">No activity yet.</li>}
-        {recentActivity.map((entry) => (
-          <li key={entry.id} className="text-zinc-600 dark:text-zinc-400">
-            {entry.occurredAt.toISOString()} —{" "}
-            <Link href={`/systems/${entry.aiSystem.id}`} className="underline hover:no-underline">
-              {entry.aiSystem.name}
-            </Link>{" "}
-            — {entry.actor.name ?? entry.actor.email} — {entry.action}
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

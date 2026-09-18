@@ -30,6 +30,7 @@ for (const path of [
   "/systems/api-keys/docs",
   "/systems/api-keys/docs/reference",
   "/systems/api-keys/docs/openapi.json",
+  "/systems/activity",
 ]) {
   test(`${path} redirects an anonymous visitor to sign-in`, async ({ page }) => {
     await page.goto(path);

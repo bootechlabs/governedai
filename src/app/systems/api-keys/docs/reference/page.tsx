@@ -16,7 +16,9 @@ export default async function ApiReferencePage() {
   const spec = buildOpenApiSpec(getRequestOrigin(await headers()));
 
   return (
-    <div>
+    // Scalar sticks its own sidebar to the top; keep it below the app's sticky
+    // 3.5rem top bar (see src/app/systems/layout.tsx).
+    <div style={{ "--scalar-custom-header-height": "3.5rem" } as React.CSSProperties}>
       <div className="border-b border-zinc-200 px-6 py-2 text-sm dark:border-zinc-800">
         <Link href="/systems/api-keys/docs" className={subtleLinkClass}>
           ← API docs

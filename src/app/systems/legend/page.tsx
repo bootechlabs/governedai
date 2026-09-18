@@ -1,17 +1,14 @@
 import Link from "next/link";
 import {
   ArrowLeft,
-  LayoutDashboard,
-  ClipboardList,
-  Users,
-  KeyRound,
-  Code,
-  Building2,
   CircleQuestionMark,
   LogOut,
+  Menu,
+  PanelLeftClose,
   Tag,
   type LucideIcon,
 } from "lucide-react";
+import { NAV_SECTIONS } from "@/lib/nav";
 import {
   classificationConfig,
   deploymentStatusConfig,
@@ -23,14 +20,15 @@ import {
 
 export const dynamic = "force-dynamic";
 
+// Generated from the same nav definition the sidebar renders (src/lib/nav.ts),
+// so it can't drift from the real menu; only controls that aren't nav items
+// are listed by hand.
 const NAV_ICONS: { icon: LucideIcon; label: string; description: string }[] = [
-  { icon: LayoutDashboard, label: "Dashboard", description: "Org-wide counts and what's pending review" },
-  { icon: ClipboardList, label: "Inventory", description: "The full list of AI systems" },
-  { icon: Users, label: "Users", description: "Admin-provisioned users and roles (admin only)" },
-  { icon: KeyRound, label: "SSO", description: "Per-org SAML/OIDC connections (admin only)" },
-  { icon: Code, label: "API keys", description: "Public API access keys (admin only)" },
-  { icon: Building2, label: "Vendors", description: "The vendor registry (admin only)" },
-  { icon: CircleQuestionMark, label: "Legend", description: "This page" },
+  ...NAV_SECTIONS.flat()
+    .flatMap((item) => [item, ...(item.children ?? [])])
+    .map(({ icon, label, description }) => ({ icon, label, description })),
+  { icon: PanelLeftClose, label: "Collapse or expand sidebar", description: "Icons only, or icons with labels" },
+  { icon: Menu, label: "Open navigation", description: "The menu on phone-sized screens" },
   { icon: LogOut, label: "Sign out", description: "End your session" },
   { icon: ArrowLeft, label: "Back", description: "Return to the previous list" },
 ];
