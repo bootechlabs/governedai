@@ -23,7 +23,14 @@ test("sign-in page renders the magic-link form", async ({ page }) => {
   await expect(magicLinkForm.getByRole("button", { name: "Send magic link" })).toBeVisible();
 });
 
-for (const path of ["/systems", "/systems/some-id", "/systems/users", "/systems/api-keys/docs"]) {
+for (const path of [
+  "/systems",
+  "/systems/some-id",
+  "/systems/users",
+  "/systems/api-keys/docs",
+  "/systems/api-keys/docs/reference",
+  "/systems/api-keys/docs/openapi.json",
+]) {
   test(`${path} redirects an anonymous visitor to sign-in`, async ({ page }) => {
     await page.goto(path);
     await expect(page).toHaveURL(/\/sign-in/);

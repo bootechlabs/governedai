@@ -39,6 +39,23 @@ export default async function ApiDocsPage() {
         — you&apos;ll only ever see or create systems within it.
       </p>
 
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-zinc-200 px-4 py-3 dark:border-zinc-800">
+        <Link
+          href="/systems/api-keys/docs/reference"
+          className="font-medium underline hover:no-underline"
+        >
+          Interactive reference (OpenAPI)
+        </Link>
+        <a
+          href="/systems/api-keys/docs/openapi.json"
+          download="governedai-openapi.json"
+          className="text-zinc-500 underline hover:no-underline"
+        >
+          Download openapi.json
+        </a>
+        <span className="text-zinc-500">Browse every endpoint and try requests with your key.</span>
+      </div>
+
       <h2 className="mt-6 font-medium">List AI systems</h2>
       <p className="mt-1 text-zinc-500">
         <code>GET /api/v1/ai-systems</code> — returns active systems by default; pass{" "}

@@ -104,7 +104,7 @@ Every state change in 1–4 writes an audit log entry, which is what makes 5 pos
 
 ## Screens (as built)
 
-Dashboard (`/systems`), inventory (`/systems/inventory`), system detail (record always visible, risk classification/workflow/evidence/audit trail as tabs), add/edit system form, intake questionnaire, review/approval action (on system detail), report export (CSV/PDF, system-level and portfolio-level), auditor share links (create/revoke on system detail, unauthenticated `/share/[token]` landing page + PDF), vendor registry + detail, users/SSO/API-keys admin pages, API docs (`/systems/api-keys/docs` — readable by any signed-in user, linked from the header; anonymous visitors are redirected to sign-in, covered by the e2e auth-gate spec), icon legend, platform global dashboard + per-org support view.
+Dashboard (`/systems`), inventory (`/systems/inventory`), system detail (record always visible, risk classification/workflow/evidence/audit trail as tabs), add/edit system form, intake questionnaire, review/approval action (on system detail), report export (CSV/PDF, system-level and portfolio-level), auditor share links (create/revoke on system detail, unauthenticated `/share/[token]` landing page + PDF), vendor registry + detail, users/SSO/API-keys admin pages, API docs (`/systems/api-keys/docs` prose quick-start, plus an interactive Scalar OpenAPI reference at `/systems/api-keys/docs/reference` with a "Test request" console and a session-authenticated `openapi.json` download — all readable by any signed-in user, linked from the header; anonymous visitors are redirected to sign-in, covered by the e2e auth-gate spec), icon legend, platform global dashboard + per-org support view.
 
 ## Stack (as built)
 
@@ -116,6 +116,7 @@ Dashboard (`/systems`), inventory (`/systems/inventory`), system detail (record 
 - **Scheduled jobs**: Vercel Cron (`vercel.json`) — one daily job (`/api/cron/vendor-reattestation`), protected by a shared `CRON_SECRET` since a cron invocation carries no user session.
 - **Hosting**: Vercel, auto-deploys `main`.
 - **PDF export**: server-side (pdfkit), branded, with per-regulation compliance sections computed from real evidence data.
+- **API reference**: OpenAPI 3.1 spec generated in code (`src/lib/openapi.ts`) and rendered with Scalar (`@scalar/api-reference-react`, pinned, bundled same-origin). Vitest drift guards fail the build if the spec's fields, enums, or operations diverge from the route handlers/serializers. Scalar's telemetry, AI agent, MCP, client links, and CDN fonts are disabled and API keys aren't persisted to browser storage, since a real key is typed into the console.
 - **Testing**: Vitest for units (regulation checklist logic, risk scoring, bulk-import parsing, vendor matching, etc.), Playwright for the auth-gate smoke test.
 
 ## Fast-follow candidates (after initial traction)
