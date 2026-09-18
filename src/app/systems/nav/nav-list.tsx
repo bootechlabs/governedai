@@ -4,21 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { isNavActive, type NavItem } from "@/lib/nav";
-
-// Labels, the chevron, and group children show or hide purely from the
-// enclosing `group/nav` element's data-nav value ("collapsed" | "expanded" |
-// "auto"; auto = expanded from the xl breakpoint up). The phone drawer wraps
-// this in data-nav="expanded", so it needs no separate code path.
-const showWhenExpanded =
-  "group-data-[nav=collapsed]/nav:hidden group-data-[nav=auto]/nav:hidden xl:group-data-[nav=auto]/nav:inline";
-const showBlockWhenExpanded =
-  "group-data-[nav=collapsed]/nav:hidden group-data-[nav=auto]/nav:hidden xl:group-data-[nav=auto]/nav:block";
-
-const rowBase =
-  "flex min-h-11 w-full items-center gap-3 rounded-md px-[11px] py-2 text-sm md:min-h-9";
-const rowIdle =
-  "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100";
-const rowActive = "bg-zinc-100 font-medium text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50";
+import { rowActive, rowBase, rowIdle, showBlockWhenExpanded, showWhenExpanded } from "./nav-styles";
 
 function ItemLink({
   item,

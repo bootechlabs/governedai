@@ -11,7 +11,7 @@ import { NavList } from "./nav-list";
 // Slide-over navigation for phones (below md). Always shows labels, has
 // touch-sized rows, and traps focus by making the rest of the app inert while
 // open — the layout marks the top bar and <main> with data-nav-inert.
-export function MobileDrawer({ role }: { role: UserRole }) {
+export function MobileDrawer({ role, footer }: { role: UserRole; footer: React.ReactNode }) {
   const { drawerOpen, setDrawerOpen } = useNav();
   const pathname = usePathname();
   const sections = useMemo(() => visibleNav(role), [role]);
@@ -87,6 +87,16 @@ export function MobileDrawer({ role }: { role: UserRole }) {
         <nav aria-label="Help" className="px-2 pt-2">
           <NavList sections={sections.slice(-1)} pathname={pathname} onNavigate={close} />
         </nav>
+        {/* The footer is server-rendered, so its profile link can't take an
+            onClick; close on any link click inside it instead. */}
+        <div
+          onClick={(event) => {
+            if ((event.target as HTMLElement).closest("a")) close();
+          }}
+          className="mt-2 border-t border-zinc-200 px-2 pt-2 dark:border-zinc-800"
+        >
+          {footer}
+        </div>
       </div>
     </div>
   );

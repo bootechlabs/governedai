@@ -1,18 +1,14 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { LogOut, UserCog } from "lucide-react";
+import { UserCog } from "lucide-react";
 import { getCurrentUserOrNull } from "@/lib/current-user";
-import { Avatar } from "@/lib/avatar";
 import { NAV_COOKIE, parseNavPref } from "@/lib/nav";
-import { getSessionCookie, clearSessionCookie } from "@/lib/session";
-import { endImpersonation, clearImpersonationCookie } from "@/lib/impersonation";
-import { stytchClient } from "@/lib/stytch";
 import { stopImpersonation } from "./impersonation-actions";
 import { NavProvider } from "./nav/nav-provider";
 import { Sidebar } from "./nav/sidebar";
 import { MobileDrawer } from "./nav/mobile-drawer";
 import { Hamburger } from "./nav/hamburger";
+import { AccountFooter } from "./nav/account-footer";
 
 export default async function SystemsLayout({
   children,
@@ -29,11 +25,11 @@ export default async function SystemsLayout({
   return (
     <NavProvider initialPref={navPref}>
       <div className="flex min-h-screen flex-col">
-        {/* Sticky so sign-out and the profile are always reachable, and so the
-            sidebar has a fixed offset (h-14) to sit under. */}
+        {/* Sticky so the sidebar has a fixed offset (h-14) to sit under. The
+            profile link and sign-out live at the bottom of the sidebar/drawer. */}
         <header
           data-nav-inert
-          className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-zinc-200 bg-background px-4 text-sm dark:border-zinc-800"
+          className="sticky top-0 z-30 flex h-14 shrink-0 items-center border-b border-zinc-200 bg-background px-4 text-sm dark:border-zinc-800"
         >
           <div className="flex items-center gap-2">
             <Hamburger />
@@ -45,37 +41,6 @@ export default async function SystemsLayout({
               alt="GovernedAI"
               className="hidden h-6 w-auto dark:block"
             />
-          </div>
-          <div className="flex items-center gap-3 text-zinc-500">
-            {/* Avatar's own title attribute (name/email) shows on hover —
-                role is one click away on the profile page itself. */}
-            <Link href="/systems/profile" aria-label="Your profile">
-              <Avatar user={user} />
-            </Link>
-            <form
-              action={async () => {
-                "use server";
-                if (user.impersonation) {
-                  await endImpersonation(user.impersonation.impersonationId);
-                  await clearImpersonationCookie();
-                }
-                const sessionJwt = await getSessionCookie();
-                await clearSessionCookie();
-                if (sessionJwt) {
-                  await stytchClient.sessions.revoke({ session_jwt: sessionJwt });
-                }
-                redirect("/sign-in");
-              }}
-            >
-              <button
-                type="submit"
-                aria-label="Sign out"
-                className="inline-flex min-h-9 items-center gap-1.5 hover:underline"
-              >
-                <LogOut size={15} />
-                <span className="hidden sm:inline">Sign out</span>
-              </button>
-            </form>
           </div>
         </header>
 
@@ -101,14 +66,14 @@ export default async function SystemsLayout({
         )}
 
         <div className="flex flex-1">
-          <Sidebar role={user.role} />
+          <Sidebar role={user.role} footer={<AccountFooter user={user} />} />
           <main data-nav-inert className="min-w-0 flex-1">
             {children}
           </main>
         </div>
       </div>
 
-      <MobileDrawer role={user.role} />
+      <MobileDrawer role={user.role} footer={<AccountFooter user={user} />} />
     </NavProvider>
   );
 }

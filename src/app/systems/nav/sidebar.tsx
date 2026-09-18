@@ -11,7 +11,7 @@ import { NavList } from "./nav-list";
 // Desktop/tablet sidebar (md and up); phones get MobileDrawer instead. Width
 // and label visibility come from data-nav via CSS only, so "auto" (collapsed
 // below xl, expanded from xl up) needs no JavaScript and can't flash.
-export function Sidebar({ role }: { role: UserRole }) {
+export function Sidebar({ role, footer }: { role: UserRole; footer: React.ReactNode }) {
   const { pref, toggle, expand } = useNav();
   const pathname = usePathname();
   const sections = useMemo(() => visibleNav(role), [role]);
@@ -70,6 +70,8 @@ export function Sidebar({ role }: { role: UserRole }) {
       <nav aria-label="Help" className="px-2 pt-2">
         <NavList sections={pinned} pathname={pathname} railOnly={forced} />
       </nav>
+
+      <div className="mt-2 border-t border-zinc-200 px-2 pt-2 dark:border-zinc-800">{footer}</div>
     </aside>
   );
 }
