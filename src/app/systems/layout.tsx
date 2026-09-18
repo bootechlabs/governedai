@@ -6,6 +6,7 @@ import {
   Users,
   KeyRound,
   Code,
+  BookOpen,
   Building2,
   CircleQuestionMark,
   LogOut,
@@ -73,6 +74,14 @@ export default async function SystemsLayout({
               Vendors
             </Link>
           )}
+          <Link
+            href="/systems/api-keys/docs"
+            className="inline-flex items-center gap-1.5 hover:underline"
+            title="API documentation"
+          >
+            <BookOpen size={15} />
+            API docs
+          </Link>
           <Link
             href="/systems/legend"
             className="inline-flex items-center gap-1.5 hover:underline"

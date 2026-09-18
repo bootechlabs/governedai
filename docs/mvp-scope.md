@@ -104,7 +104,7 @@ Every state change in 1–4 writes an audit log entry, which is what makes 5 pos
 
 ## Screens (as built)
 
-Dashboard (`/systems`), inventory (`/systems/inventory`), system detail (record always visible, risk classification/workflow/evidence/audit trail as tabs), add/edit system form, intake questionnaire, review/approval action (on system detail), report export (CSV/PDF, system-level and portfolio-level), auditor share links (create/revoke on system detail, unauthenticated `/share/[token]` landing page + PDF), vendor registry + detail, users/SSO/API-keys admin pages, icon legend, platform global dashboard + per-org support view.
+Dashboard (`/systems`), inventory (`/systems/inventory`), system detail (record always visible, risk classification/workflow/evidence/audit trail as tabs), add/edit system form, intake questionnaire, review/approval action (on system detail), report export (CSV/PDF, system-level and portfolio-level), auditor share links (create/revoke on system detail, unauthenticated `/share/[token]` landing page + PDF), vendor registry + detail, users/SSO/API-keys admin pages, API docs (`/systems/api-keys/docs` — readable by any signed-in user, linked from the header; anonymous visitors are redirected to sign-in, covered by the e2e auth-gate spec), icon legend, platform global dashboard + per-org support view.
 
 ## Stack (as built)
 
