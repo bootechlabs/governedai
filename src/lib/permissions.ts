@@ -36,3 +36,15 @@ export function canManageApiKeys(role: UserRole) {
 export function canManageVendors(role: UserRole) {
   return role === "ADMIN";
 }
+
+// Slice 17 — recording that the org looked at a regulatory update. Same
+// people who can decide a workflow stage; a CONTRIBUTOR just reads.
+export function canReviewRegulatoryUpdate(role: UserRole) {
+  return role === "ADMIN" || role === "REVIEWER";
+}
+
+// Re-opening the decision form on every affected system is a bigger step than
+// noting a review, so it is explicit and admin-only, never automatic.
+export function canFlagRegulatoryRecertification(role: UserRole) {
+  return role === "ADMIN";
+}

@@ -52,7 +52,8 @@ export default async function InventoryPage({
   const { archived, status, risk, sort, dir } = await searchParams;
   const showArchived = archived === "1";
   const statusFilter = status as DeploymentStatus | undefined;
-  const riskFilter = risk as RiskTier | undefined;
+  // UNASSESSED = no risk classification yet (linked from the regulatory updates nudge).
+  const riskFilter = risk as RiskTier | "UNASSESSED" | undefined;
   const sortField = SORT_KEYS.includes(sort as SortKey) ? (sort as SortKey) : null;
   const sortDir: SortDir = dir === "asc" ? "asc" : "desc";
   const actor = await getCurrentUser();
@@ -63,7 +64,11 @@ export default async function InventoryPage({
     organizationId: orgId,
     archivedAt: showArchived ? { not: null } : null,
     ...(statusFilter ? { deploymentStatus: statusFilter } : {}),
-    ...(riskFilter ? { riskClassification: { riskTier: riskFilter } } : {}),
+    ...(riskFilter === "UNASSESSED"
+      ? { riskClassification: { is: null } }
+      : riskFilter
+        ? { riskClassification: { riskTier: riskFilter } }
+        : {}),
   };
 
   // Preserves whichever filters/sort are active across the archived/active toggle.

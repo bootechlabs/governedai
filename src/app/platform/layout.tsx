@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
-import { LayoutDashboard, Building2 } from "lucide-react";
+import { LayoutDashboard, Building2, Scale } from "lucide-react";
 import { getCurrentUserOrNull } from "@/lib/current-user";
 
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
@@ -35,6 +35,10 @@ export default async function PlatformLayout({ children }: { children: React.Rea
           <Link href="/platform" className="inline-flex items-center gap-1.5 hover:underline">
             <LayoutDashboard size={15} />
             Global dashboard
+          </Link>
+          <Link href="/platform/updates" className="inline-flex items-center gap-1.5 hover:underline">
+            <Scale size={15} />
+            Regulatory updates
           </Link>
           <Link href="/systems" className="inline-flex items-center gap-1.5 hover:underline">
             <Building2 size={15} />

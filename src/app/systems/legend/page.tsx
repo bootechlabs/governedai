@@ -16,6 +16,8 @@ import {
   riskTierConfig,
   baaStatusConfig,
   evidenceCategoryLabels,
+  regulatoryUpdateKindConfig,
+  updateFlagConfig,
 } from "@/lib/badges";
 
 export const dynamic = "force-dynamic";
@@ -108,6 +110,35 @@ export default function LegendPage() {
         {Object.values(baaStatusConfig).map((c) => (
           <Row key={c.label} icon={c.icon} label={c.label} description="Vendor BAA (Business Associate Agreement) status" />
         ))}
+      </Section>
+
+      <Section title="Regulatory update kind">
+        {Object.values(regulatoryUpdateKindConfig).map((c) => (
+          <Row key={c.label} icon={c.icon} label={c.label} description="What kind of regulatory development an update describes" />
+        ))}
+      </Section>
+
+      <Section title="Regulatory update status">
+        <Row
+          icon={updateFlagConfig.actionRequired.icon}
+          label={updateFlagConfig.actionRequired.label}
+          description="A curator marked this update as one that may call for action"
+        />
+        <Row
+          icon={updateFlagConfig.needsReview.icon}
+          label={updateFlagConfig.needsReview.label}
+          description="May affect your systems and your organization hasn't recorded a review"
+        />
+        <Row
+          icon={updateFlagConfig.stale.icon}
+          label={updateFlagConfig.stale.label}
+          description="The update was corrected after your organization's review"
+        />
+        <Row
+          icon={updateFlagConfig.reviewed.icon}
+          label={updateFlagConfig.reviewed.label}
+          description="Your organization has recorded a review of this update"
+        />
       </Section>
 
       <Section title="Evidence category">

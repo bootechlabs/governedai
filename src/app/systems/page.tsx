@@ -5,11 +5,15 @@ import {
   Building2,
   ClipboardList,
   Siren,
+  Scale,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 import { deploymentStatusConfig, riskTierConfig } from "@/lib/badges";
 import { subtleLinkClass } from "@/lib/ui";
+import { loadOrgFeed } from "@/lib/regulatory-updates-db";
+import { formatDate } from "@/lib/regulatory-updates";
+import { UpdateKindBadge } from "@/lib/badges";
 import type { DeploymentStatus, RiskTier, StageStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -128,6 +132,7 @@ export default async function DashboardPage() {
     stageSystems,
     archivedCount,
     openIncidentCount,
+    regulatoryFeed,
   ] = await Promise.all([
     prisma.aiSystem.count({ where: activeFilter }),
     prisma.aiSystem.groupBy({ by: ["deploymentStatus"], where: activeFilter, _count: true }),
@@ -157,6 +162,7 @@ export default async function DashboardPage() {
     }),
     prisma.aiSystem.count({ where: { organizationId: orgId, archivedAt: { not: null } } }),
     prisma.incident.count({ where: { resolvedAt: null, aiSystem: activeFilter } }),
+    loadOrgFeed(orgId),
   ]);
 
   const deploymentCounts = Object.fromEntries(
@@ -175,6 +181,12 @@ export default async function DashboardPage() {
       v.lastAttestedAt.getTime() + v.attestationCadenceDays * 24 * 60 * 60 * 1000 < now.getTime();
     return baaNeedsAttention || reattestationOverdue;
   }).length;
+
+  // Regulatory updates card: what was published lately, and how many of all
+  // published updates may affect this org and still need a review.
+  const recentCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const recentUpdates = regulatoryFeed.items.filter((i) => i.publishedAt >= recentCutoff);
+  const updatesNeedingReview = regulatoryFeed.items.filter((i) => i.needsReview).length;
 
   const projectStatusCounts: Record<ProjectStatus, number> = {
     NOT_STARTED: 0,
@@ -400,6 +412,55 @@ export default async function DashboardPage() {
             View vendors
           </Link>
         </div>
+      </div>
+
+      <div className={`mt-6 ${tileClass}`}>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-zinc-500">
+            <Scale size={16} />
+            <span className="text-xs uppercase tracking-wide">Regulatory updates</span>
+          </div>
+          <Link href="/systems/updates" className={`text-xs ${subtleLinkClass}`}>
+            View all updates
+          </Link>
+        </div>
+        <p className="mt-2 text-sm">
+          <span className="text-2xl font-semibold">{recentUpdates.length}</span>{" "}
+          <span className="text-zinc-500">published in the last 30 days</span>
+        </p>
+        <p
+          className={
+            updatesNeedingReview > 0
+              ? "mt-1 text-xs text-amber-600 dark:text-amber-400"
+              : "mt-1 text-xs text-zinc-500"
+          }
+        >
+          {updatesNeedingReview > 0 ? (
+            <Link href="/systems/updates?tab=review" className="underline hover:no-underline">
+              {updatesNeedingReview} may affect your systems and {updatesNeedingReview === 1 ? "needs" : "need"} review
+            </Link>
+          ) : (
+            "none need review"
+          )}
+        </p>
+        {recentUpdates.length > 0 && (
+          <ul className="mt-3 flex flex-col divide-y divide-zinc-200 border-t border-zinc-200 text-sm dark:divide-zinc-800 dark:border-zinc-800">
+            {recentUpdates.slice(0, 3).map((update) => (
+              <li key={update.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2">
+                <UpdateKindBadge value={update.kind} />
+                <Link href={`/systems/updates/${update.id}`} className="min-w-0 flex-1 truncate hover:underline">
+                  {update.title}
+                </Link>
+                <span className="text-xs text-zinc-500">
+                  {update.affected.length > 0
+                    ? `may affect ${update.affected.length} ${update.affected.length === 1 ? "system" : "systems"} · `
+                    : ""}
+                  {formatDate(update.publishedAt)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

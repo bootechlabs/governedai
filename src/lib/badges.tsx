@@ -20,6 +20,13 @@ import {
   FileClock,
   FileX2,
   Tag,
+  Gavel,
+  Compass,
+  Siren,
+  FilePenLine,
+  BadgeCheck,
+  CircleAlert,
+  RefreshCw,
   type LucideIcon,
 } from "lucide-react";
 import type {
@@ -29,7 +36,9 @@ import type {
   RiskTier,
   BaaStatus,
   EvidenceCategory,
+  RegulatoryUpdateKind,
 } from "@prisma/client";
+import { KIND_LABELS, type ReviewState } from "@/lib/regulatory-updates";
 
 // Canonical status color vocabulary — every badge on the app uses one of
 // these, so a color always means the same thing everywhere it appears:
@@ -153,4 +162,57 @@ export const evidenceCategoryLabels: Record<EvidenceCategory, string> = {
 
 export function EvidenceCategoryBadge({ value }: { value: EvidenceCategory }) {
   return <Badge icon={Tag} label={evidenceCategoryLabels[value]} colorClass="text-zinc-500" />;
+}
+
+// Regulatory updates (slice 17). The kind is descriptive, not a severity, so
+// every kind is neutral zinc — only the flags below carry amber/emerald.
+export const regulatoryUpdateKindConfig: Record<
+  RegulatoryUpdateKind,
+  { icon: LucideIcon; label: string; colorClass: string }
+> = {
+  ENACTED: { icon: Gavel, label: KIND_LABELS.ENACTED, colorClass: "text-zinc-600 dark:text-zinc-400" },
+  EFFECTIVE_DATE_CHANGE: {
+    icon: CalendarClock,
+    label: KIND_LABELS.EFFECTIVE_DATE_CHANGE,
+    colorClass: "text-zinc-600 dark:text-zinc-400",
+  },
+  GUIDANCE: { icon: Compass, label: KIND_LABELS.GUIDANCE, colorClass: "text-zinc-600 dark:text-zinc-400" },
+  ENFORCEMENT: { icon: Siren, label: KIND_LABELS.ENFORCEMENT, colorClass: "text-zinc-600 dark:text-zinc-400" },
+  PROPOSED: { icon: FilePenLine, label: KIND_LABELS.PROPOSED, colorClass: "text-zinc-600 dark:text-zinc-400" },
+  ACCREDITATION: {
+    icon: BadgeCheck,
+    label: KIND_LABELS.ACCREDITATION,
+    colorClass: "text-zinc-600 dark:text-zinc-400",
+  },
+  OTHER: { icon: Tag, label: KIND_LABELS.OTHER, colorClass: "text-zinc-600 dark:text-zinc-400" },
+};
+
+export function UpdateKindBadge({ value }: { value: RegulatoryUpdateKind }) {
+  const config = regulatoryUpdateKindConfig[value];
+  return <Badge icon={config.icon} label={config.label} colorClass={config.colorClass} />;
+}
+
+export const updateFlagConfig = {
+  actionRequired: {
+    icon: CircleAlert,
+    label: "Action may be needed",
+    colorClass: "text-amber-600 dark:text-amber-400",
+  },
+  needsReview: { icon: Eye, label: "Needs review", colorClass: "text-amber-600 dark:text-amber-400" },
+  stale: {
+    icon: RefreshCw,
+    label: "Revised since you reviewed",
+    colorClass: "text-amber-600 dark:text-amber-400",
+  },
+  reviewed: { icon: CheckCircle2, label: "Reviewed", colorClass: "text-emerald-600 dark:text-emerald-400" },
+} as const;
+
+export function UpdateFlagBadge({ flag }: { flag: keyof typeof updateFlagConfig }) {
+  const config = updateFlagConfig[flag];
+  return <Badge icon={config.icon} label={config.label} colorClass={config.colorClass} />;
+}
+
+// The review-state badge for an update that affects at least one system.
+export function UpdateReviewBadge({ state }: { state: ReviewState }) {
+  return <UpdateFlagBadge flag={state === "reviewed" ? "reviewed" : state === "stale" ? "stale" : "needsReview"} />;
 }

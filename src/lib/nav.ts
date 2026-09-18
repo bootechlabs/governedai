@@ -4,6 +4,7 @@ import {
   Building2,
   ScrollText,
   Activity,
+  Scale,
   Users,
   KeyRound,
   Code,
@@ -66,6 +67,13 @@ export const NAV_SECTIONS: NavItem[][] = [
     },
   ],
   [
+    {
+      id: "updates",
+      label: "Regulatory updates",
+      description: "Curated regulatory developments and which of your systems they may affect",
+      icon: Scale,
+      href: "/systems/updates",
+    },
     {
       id: "logs",
       label: "Logs",
@@ -155,6 +163,7 @@ const RESERVED_SEGMENTS = new Set([
   "inventory",
   "vendors",
   "activity",
+  "updates",
   "users",
   "sso",
   "api-keys",

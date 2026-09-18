@@ -109,6 +109,8 @@ model Organization {
   aiSystems AiSystem[]
   apiKeys   ApiKey[]
   vendors   Vendor[]
+
+  regulatoryUpdateReviews RegulatoryUpdateReview[]
 }
 
 // Admin-managed vendor registry — additive to AiSystem.vendorName (free
@@ -410,6 +412,7 @@ model RegulationDefinition {
 
   artifacts   RegulationArtifactDefinition[]
   triggeredIn RiskClassificationRegulation[]
+  updates     RegulatoryUpdateRegulation[]
 }
 
 // The compliance-checklist items shown for a regulation once triggered —
@@ -527,4 +530,99 @@ model AuditLogEntry {
 
   actor   User   @relation("AuditActor", fields: [actorId], references: [id])
   actorId String
+}
+
+// ---------------------------------------------------------------------------
+// Slice 17 — regulatory updates feed. A curated, platform-admin-authored feed
+// of public regulatory developments, matched per org at read time to the org's
+// registered systems (see src/lib/regulatory-updates.ts). Nothing here is
+// ingested or published automatically.
+// ---------------------------------------------------------------------------
+
+enum RegulatoryUpdateKind {
+  ENACTED
+  EFFECTIVE_DATE_CHANGE
+  GUIDANCE
+  ENFORCEMENT
+  PROPOSED
+  ACCREDITATION
+  OTHER
+}
+
+enum RegulatoryReviewOutcome {
+  NO_ACTION_NEEDED
+  REASSESSMENT_FLAGGED
+}
+
+// The first GLOBAL content table — every other model is org-scoped. Orgs only
+// ever read published, non-archived rows; it holds no org data. Draft =
+// publishedAt null, archived = archivedAt set (same timestamp-derived idiom as
+// WorkflowStage.decidedAt / ShareLink.revokedAt / Incident.resolvedAt).
+model RegulatoryUpdate {
+  id               String               @id @default(cuid())
+  // Stable key so the seed script can upsert idempotently.
+  slug             String               @unique
+  title            String
+  // 1-2 factual sentences, no interpretation.
+  summary          String
+  // One advisory sentence, framed as "may".
+  whyItMatters     String?
+  kind             RegulatoryUpdateKind
+  sourceName       String
+  // https only, validated in src/lib/regulatory-updates.ts.
+  sourceUrl        String
+  // When the underlying development occurred.
+  eventDate        DateTime
+  // When obligations begin, if applicable.
+  effectiveDate    DateTime?
+  // Matches RiskClassification.useCaseTemplate. An enum array (not free text)
+  // so a typo can't be stored.
+  useCaseTemplates UseCaseTemplate[]
+  // null = every org; otherwise must equal Organization.vertical.
+  vertical         String?
+  // Used sparingly — see the curation policy in the slice 17 scope.
+  actionRequired   Boolean              @default(false)
+  publishedAt      DateTime?
+  revisedAt        DateTime?
+  // Required whenever revisedAt is set.
+  revisionNote     String?
+  archivedAt       DateTime?
+  createdById      String
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  regulations RegulatoryUpdateRegulation[]
+  reviews     RegulatoryUpdateReview[]
+}
+
+model RegulatoryUpdateRegulation {
+  id String @id @default(cuid())
+
+  update   RegulatoryUpdate @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  updateId String
+
+  regulation   RegulationDefinition @relation(fields: [regulationId], references: [id])
+  regulationId String
+
+  @@unique([updateId, regulationId])
+}
+
+// Org-scoped. One decision per org per update; stale once the update is
+// revised after reviewedAt. NOT hash-chained — the per-system AuditLogEntry
+// rows written alongside it are the tamper-evident record.
+model RegulatoryUpdateReview {
+  id           String                  @id @default(cuid())
+  outcome      RegulatoryReviewOutcome
+  note         String?
+  reviewedAt   DateTime                @default(now())
+  reviewedById String
+
+  update   RegulatoryUpdate @relation(fields: [updateId], references: [id], onDelete: Cascade)
+  updateId String
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+
+  @@unique([updateId, organizationId])
+  @@index([organizationId])
 }

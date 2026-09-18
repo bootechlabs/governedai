@@ -4,6 +4,8 @@ import {
   canManageSystem,
   canDecideStage,
   canManageUsers,
+  canReviewRegulatoryUpdate,
+  canFlagRegulatoryRecertification,
 } from "./permissions";
 import type { UserRole } from "@prisma/client";
 
@@ -54,5 +56,19 @@ describe("segregation of duties", () => {
       const canBoth = canCreateSystem(role) && canDecideStage(role);
       expect(canBoth).toBe(false);
     }
+  });
+});
+
+describe("regulatory update permissions", () => {
+  it("lets ADMIN and REVIEWER record a review, CONTRIBUTOR only read", () => {
+    expect(canReviewRegulatoryUpdate("ADMIN")).toBe(true);
+    expect(canReviewRegulatoryUpdate("REVIEWER")).toBe(true);
+    expect(canReviewRegulatoryUpdate("CONTRIBUTOR")).toBe(false);
+  });
+
+  it("lets only ADMIN flag systems for recertification", () => {
+    expect(canFlagRegulatoryRecertification("ADMIN")).toBe(true);
+    expect(canFlagRegulatoryRecertification("REVIEWER")).toBe(false);
+    expect(canFlagRegulatoryRecertification("CONTRIBUTOR")).toBe(false);
   });
 });

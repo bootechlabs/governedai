@@ -25,7 +25,7 @@ describe("visibleNav", () => {
     "still gives a %s the API docs, the reference, and the activity log",
     (role) => {
       const shown = labels(role);
-      for (const visible of ["Dashboard", "Inventory", "API", "API docs", "OpenAPI reference", "Logs", "Activity log", "Legend"]) {
+      for (const visible of ["Dashboard", "Inventory", "API", "API docs", "OpenAPI reference", "Logs", "Activity log", "Regulatory updates", "Legend"]) {
         expect(shown).toContain(visible);
       }
     },
@@ -87,7 +87,7 @@ describe("isNavActive", () => {
 
   it("does not highlight Inventory on other top-level pages", () => {
     const inventory = find("inventory");
-    for (const path of ["/systems", "/systems/vendors", "/systems/activity", "/systems/users", "/systems/api-keys/docs", "/systems/legend"]) {
+    for (const path of ["/systems", "/systems/vendors", "/systems/activity", "/systems/updates", "/systems/users", "/systems/api-keys/docs", "/systems/legend"]) {
       expect(isNavActive(inventory, path), path).toBe(false);
     }
   });
@@ -101,6 +101,13 @@ describe("isNavActive", () => {
     expect(isNavActive(docs, "/systems/api-keys/docs")).toBe(true);
     expect(isNavActive(docs, "/systems/api-keys/docs/reference")).toBe(false);
     expect(isNavActive(reference, "/systems/api-keys/docs/reference")).toBe(true);
+  });
+
+  it("lights Regulatory updates on its list and detail pages, not Inventory", () => {
+    const updates = find("updates");
+    expect(isNavActive(updates, "/systems/updates")).toBe(true);
+    expect(isNavActive(updates, "/systems/updates/abc123")).toBe(true);
+    expect(isNavActive(find("inventory"), "/systems/updates/abc123")).toBe(false);
   });
 
   it("lights a group when any child is active", () => {
