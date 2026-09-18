@@ -1,7 +1,11 @@
 import type { RegulatoryReviewOutcome, RegulatoryUpdateKind, UseCaseTemplate } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { logAuditEntry } from "@/lib/audit-log";
 import {
+  RECERT_CHANGE_FIELD,
+  REVIEW_OUTCOMES,
   computeAffectedSystems,
+  describeMatchReason,
   needsReview,
   reviewState,
   type AffectedSystem,
@@ -27,6 +31,8 @@ export interface FeedReview {
   note: string | null;
   reviewedAt: Date;
   reviewedById: string;
+  // Only filled by loadOrgUpdate (the detail page shows who).
+  reviewedByName?: string | null;
 }
 
 export interface FeedItem {
@@ -177,5 +183,119 @@ export async function loadOrgUpdate(
 
   const item = toFeedItem(row, ctx);
   if (!item) return null;
+
+  if (item.review) {
+    // Scoped to the org too, so a review can never surface another org's user.
+    const reviewer = await prisma.user.findFirst({
+      where: { id: item.review.reviewedById, organizationId },
+      select: { name: true, email: true },
+    });
+    item.review = { ...item.review, reviewedByName: reviewer ? (reviewer.name ?? reviewer.email) : null };
+  }
   return { item, unassessedCount: ctx.systems.filter((s) => s.riskClassification === null).length };
+}
+
+export const MAX_REVIEW_NOTE = 2000;
+
+// Records that this org looked at an update.
+//
+// One AuditLogEntry per affected active system AT THIS MOMENT, through the
+// shared helper so each system's hash chain stays intact. That freezes "which
+// systems this org considered affected at review time" — matching is computed
+// live and can change later. With no affected systems nothing is written to any
+// audit trail and the review row stands alone.
+//
+// The RegulatoryUpdateReview row is NOT hash-chained; only the per-system
+// entries are tamper-evident. Entries are written first and the review row
+// after: a failure halfway leaves extra evidence rather than a "reviewed" mark
+// with no evidence behind it, and a retry is idempotent for the review row.
+export async function recordRegulatoryReview(input: {
+  organizationId: string;
+  actorId: string;
+  updateId: string;
+  outcome: RegulatoryReviewOutcome;
+  note: string | null;
+}): Promise<{ auditedSystemCount: number }> {
+  if (!(REVIEW_OUTCOMES as readonly string[]).includes(input.outcome)) {
+    throw new Error("Choose a review outcome");
+  }
+  const note = input.note?.trim() || null;
+  if (note && note.length > MAX_REVIEW_NOTE) {
+    throw new Error(`Note must be at most ${MAX_REVIEW_NOTE} characters`);
+  }
+
+  const loaded = await loadOrgUpdate(input.organizationId, input.updateId);
+  if (!loaded) throw new Error("Regulatory update not found");
+  const { item } = loaded;
+
+  // Sequential: each system has its own chain, and a chain is read-then-write.
+  for (const system of item.affected) {
+    await logAuditEntry({
+      aiSystemId: system.id,
+      actorId: input.actorId,
+      action: "regulatory_update_reviewed",
+      detail: {
+        updateId: item.id,
+        slug: item.slug,
+        title: item.title,
+        outcome: input.outcome,
+        matchReasons: system.reasons.map(describeMatchReason),
+      },
+    });
+  }
+
+  const reviewedAt = new Date();
+  await prisma.regulatoryUpdateReview.upsert({
+    where: { updateId_organizationId: { updateId: item.id, organizationId: input.organizationId } },
+    create: {
+      updateId: item.id,
+      organizationId: input.organizationId,
+      reviewedById: input.actorId,
+      outcome: input.outcome,
+      note,
+      reviewedAt,
+    },
+    update: { reviewedById: input.actorId, outcome: input.outcome, note, reviewedAt },
+  });
+
+  return { auditedSystemCount: item.affected.length };
+}
+
+// Explicit, admin-only, never automatic. Writes a ChangeEvent per affected
+// system, which the existing computed recertification logic reads by timestamp
+// alone (see needsRecertification in src/lib/workflow.ts) to re-open the
+// decision form — it does not go through keyChangeValues on purpose — plus an
+// audit entry so the action itself is on the record.
+export async function flagAffectedForRecertification(input: {
+  organizationId: string;
+  actorId: string;
+  updateId: string;
+}): Promise<{ flaggedSystemCount: number }> {
+  const loaded = await loadOrgUpdate(input.organizationId, input.updateId);
+  if (!loaded) throw new Error("Regulatory update not found");
+  const { item } = loaded;
+
+  for (const system of item.affected) {
+    await prisma.changeEvent.create({
+      data: {
+        aiSystemId: system.id,
+        actorId: input.actorId,
+        field: RECERT_CHANGE_FIELD,
+        beforeValue: null,
+        afterValue: item.slug,
+      },
+    });
+    await logAuditEntry({
+      aiSystemId: system.id,
+      actorId: input.actorId,
+      action: "regulatory_update_flagged",
+      detail: {
+        updateId: item.id,
+        slug: item.slug,
+        title: item.title,
+        matchReasons: system.reasons.map(describeMatchReason),
+      },
+    });
+  }
+  return { flaggedSystemCount: item.affected.length };
 }

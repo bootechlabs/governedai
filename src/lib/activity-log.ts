@@ -15,6 +15,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   incident_resolved: "Incident resolved",
   share_link_created: "Auditor share link created",
   share_link_revoked: "Auditor share link revoked",
+  regulatory_update_reviewed: "Regulatory update reviewed",
+  regulatory_update_flagged: "Flagged for recertification (regulatory update)",
 };
 
 // Falls back to a readable version of the raw string for an action that

@@ -4,7 +4,16 @@ import { ArrowLeft, ExternalLink } from "lucide-react";
 import { getCurrentUser } from "@/lib/current-user";
 import { loadOrgUpdate } from "@/lib/regulatory-updates-db";
 import { UpdateFlagBadge, UpdateKindBadge, UpdateReviewBadge } from "@/lib/badges";
-import { REGULATORY_DISCLAIMER, describeMatchReason, formatDate } from "@/lib/regulatory-updates";
+import {
+  OUTCOME_LABELS,
+  REGULATORY_DISCLAIMER,
+  REVIEW_OUTCOMES,
+  describeMatchReason,
+  formatDate,
+} from "@/lib/regulatory-updates";
+import { canFlagRegulatoryRecertification, canReviewRegulatoryUpdate } from "@/lib/permissions";
+import { inputClass, primaryButtonClass } from "@/lib/ui";
+import { flagUpdateForRecertification, submitRegulatoryReview } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +27,9 @@ export default async function RegulatoryUpdateDetailPage({
   const loaded = await loadOrgUpdate(actor.organizationId, id);
   if (!loaded) notFound();
   const { item, unassessedCount } = loaded;
+  const canReview = canReviewRegulatoryUpdate(actor.role);
+  const canFlag = canFlagRegulatoryRecertification(actor.role);
+  const affectedCount = item.affected.length;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
@@ -132,6 +144,92 @@ export default async function RegulatoryUpdateDetailPage({
               View {unassessedCount === 1 ? "it" : "them"}
             </Link>
           </p>
+        )}
+      </section>
+
+
+      <section className="mt-8">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">Your organization&apos;s review</h2>
+
+        {item.review ? (
+          <div className="mt-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800">
+            <p>
+              <span className="font-medium">{OUTCOME_LABELS[item.review.outcome]}</span>
+              <span className="text-zinc-500">
+                {" "}
+                · {formatDate(item.review.reviewedAt)}
+                {item.review.reviewedByName ? ` · ${item.review.reviewedByName}` : ""}
+              </span>
+            </p>
+            {item.review.note && <p className="mt-1 text-zinc-600 dark:text-zinc-400">{item.review.note}</p>}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-zinc-500">No review recorded yet.</p>
+        )}
+
+        {item.reviewState === "stale" && (
+          <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+            Revised since you reviewed{item.revisionNote ? `: ${item.revisionNote}` : "."} Consider reviewing again.
+          </p>
+        )}
+
+        {canReview ? (
+          <form action={submitRegulatoryReview.bind(null, item.id)} className="mt-4 flex flex-col gap-3">
+            <fieldset className="flex flex-col gap-1.5">
+              <legend className="text-xs font-medium text-zinc-500">Outcome</legend>
+              {REVIEW_OUTCOMES.map((outcome) => (
+                <label key={outcome} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="outcome"
+                    value={outcome}
+                    required
+                    defaultChecked={item.review?.outcome === outcome}
+                  />
+                  {OUTCOME_LABELS[outcome]}
+                </label>
+              ))}
+            </fieldset>
+            <label htmlFor="note" className="text-xs font-medium text-zinc-500">
+              Note (optional)
+            </label>
+            <textarea
+              id="note"
+              name="note"
+              rows={3}
+              maxLength={2000}
+              defaultValue={item.review?.note ?? ""}
+              className={inputClass}
+            />
+            <p className="text-xs text-zinc-500">
+              {affectedCount > 0
+                ? `Recording this adds an entry to the audit trail of each of the ${affectedCount} ${affectedCount === 1 ? "system" : "systems"} this may affect.`
+                : "No systems currently match, so nothing will be written to any system's audit trail."}
+            </p>
+            <button type="submit" className={`self-start ${primaryButtonClass}`}>
+              {item.review ? "Update review" : "Record review"}
+            </button>
+          </form>
+        ) : (
+          <p className="mt-3 text-xs text-zinc-500">Admins and reviewers can record a review.</p>
+        )}
+
+        {canFlag && affectedCount > 0 && (
+          <form action={flagUpdateForRecertification.bind(null, item.id)} className="mt-6 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+            <p className="text-sm">
+              Flag the {affectedCount} affected {affectedCount === 1 ? "system" : "systems"} for recertification
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Re-opens the decision form on any of them that already have a decision. Never automatic — nothing
+              is flagged unless you do this.
+            </p>
+            <button
+              type="submit"
+              className="mt-2 rounded border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+            >
+              Flag for recertification
+            </button>
+          </form>
         )}
       </section>
 
