@@ -46,7 +46,20 @@ function RiskDonut({
   const strokeWidth = 16;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  let cumulative = 0;
+  // Each arc starts where the previous one ended; compute that up front so
+  // render doesn't depend on mutation order.
+  const arcs = segments
+    .filter((s) => s.value > 0)
+    .reduce<{ segment: (typeof segments)[number]; fraction: number; dash: number; offset: number }[]>(
+      (acc, segment) => {
+        const fraction = segment.value / total;
+        const dash = fraction * circumference;
+        const prev = acc[acc.length - 1];
+        const offset = prev ? prev.offset + prev.dash : 0;
+        return [...acc, { segment, fraction, dash, offset }];
+      },
+      [],
+    );
 
   return (
     <div className="relative flex h-[120px] w-[120px] shrink-0 items-center justify-center">
@@ -60,31 +73,24 @@ function RiskDonut({
           className="stroke-zinc-100 dark:stroke-zinc-800"
         />
         {total > 0 &&
-          segments
-            .filter((s) => s.value > 0)
-            .map((s) => {
-              const fraction = s.value / total;
-              const dash = fraction * circumference;
-              const dashOffset = -cumulative;
-              cumulative += dash;
-              return (
-                <circle
-                  key={s.key}
-                  cx={size / 2}
-                  cy={size / 2}
-                  r={radius}
-                  strokeWidth={strokeWidth}
-                  fill="none"
-                  strokeDasharray={`${dash} ${circumference - dash}`}
-                  strokeDashoffset={dashOffset}
-                  className={s.strokeClass}
-                >
-                  <title>
-                    {s.label}: {s.value} ({Math.round(fraction * 100)}%)
-                  </title>
-                </circle>
-              );
-            })}
+          arcs.map(({ segment: s, fraction, dash, offset }) => (
+            <circle
+              key={s.key}
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              strokeWidth={strokeWidth}
+              fill="none"
+              strokeDasharray={`${dash} ${circumference - dash}`}
+              strokeDashoffset={-offset}
+              className={s.strokeClass}
+            >
+              {/* <title> children must be a single string — JSX text + expressions
+                  make an array, which React drops on the server and then
+                  reports as a hydration mismatch. */}
+              <title>{`${s.label}: ${s.value} (${Math.round(fraction * 100)}%)`}</title>
+            </circle>
+          ))}
       </svg>
       <div className="absolute flex flex-col items-center">
         <span className="text-xl font-semibold">{total}</span>
