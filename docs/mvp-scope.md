@@ -2,7 +2,7 @@
 
 Companion to `solo-founder-execution-plan.md`. This doc merges two things that drifted apart: what's actually been built in Claude Code CLI (`~/Projects/work/governedai`), and the v0.1 scope/competitive-positioning doc from the Cowork planning session (`claude/mvp-scope.md` in the claude.ai Project) — see "Reconciliation note" below for how the two were merged.
 
-## Status — 2026-09-15
+## Status — 2026-09-18
 
 Live at app.governedai.co (Vercel), real org (Bootech) provisioned.
 
@@ -34,6 +34,9 @@ Live at app.governedai.co (Vercel), real org (Bootech) provisioned.
 - **Slice 14 — adversarial/red-team security evaluation evidence**: `SECURITY_EVALUATION` evidence category, a parallel `Vendor.securityEvalUrl` field, and a gated intake question (autonomous-action templates only) feeding the existing Technology & Data Safety tier.
 - **Slice 15 — agentic AI system assessment**: `AiSystem.isAgentic` gates a 5-question supplemental block (Baylor Hankamer School of Business's Identity/Behavior/Data Boundaries/Access Scope/Failure Response dimensions) scored into `RiskClassification.agenticRiskTier`; two more evidence categories (`OVERRIDE_REVOCATION_PROCEDURE`, `ACCESS_LIFECYCLE_POLICY`).
 - **Slice 16 — litmus headline, audit-log integrity, vendor agent fields**: a PDF headline section answering Baylor's three board-level litmus questions for agentic systems; `AuditLogEntry` is now sequentially hash-chained per system (`verifyAuditChain` makes tamper-evidence a checkable claim, not just asserted); three `Vendor` fields for agent-platform posture.
+- **API docs behind sign-in**: `/systems/api-keys/docs` (prose quick-start) plus an interactive Scalar OpenAPI reference at `/systems/api-keys/docs/reference` (a "Test request" console, generated spec, session-authenticated `openapi.json` download), readable by any signed-in user. Scalar's third-party surface is off (telemetry, agent/MCP features, CDN fonts, persisted auth), and anonymous visitors are redirected to sign-in (e2e auth-gate spec).
+- **App shell + activity log**: the busy top nav became a collapsible left sidebar (icons-only or icons + labels, choice remembered in a cookie, auto below ~1280px) with Logs and API parent items, profile link and sign-out at its bottom, and a slide-over drawer on phones. The nav is defined once as data (`src/lib/nav.ts`) so a future mobile build can reuse it. "Recent activity" moved off the dashboard to its own `/systems/activity` page (org-scoped, 50 per page, filter by action or system, UTC times). A phone-width audit of the other pages (inventory table, system-detail tabs, forms) is a known follow-up, not done.
+- **Audit-hash fix**: the per-system hash chain no longer reports false integrity failures (jsonb key-order canonicalization in `src/lib/audit-hash.ts`; `--rehash` re-seals existing rows).
 
 **Deliberately deferred:**
 - Stytch Live environment cutover (still on Test) — decision 2026-09-15: stay on Test until the product is more complete rather than cut over now. Functionally identical (real emails, real sessions), so this is a later infra task, not a blocker.
