@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 const tileClass = "rounded-lg border border-zinc-200 p-4 dark:border-zinc-800";
 
-// A system's on-track status isn't a stored field — it's derived from its
+// A system's review status isn't a stored field — it's derived from its
 // workflow stages, since that's the only place lifecycle progress lives.
 type ProjectStatus = "NOT_STARTED" | "IN_PROGRESS" | "IN_REVIEW" | "COMPLETED" | "REJECTED";
 
@@ -151,7 +151,7 @@ export default async function DashboardPage() {
     prisma.workflowStage.count({
       where: { status: { in: ["PENDING", "IN_REVIEW"] }, aiSystem: activeFilter },
     }),
-    // Feeds the "on track" chart below — on-track status isn't stored, it's
+    // Feeds the "review status" chart below — review status isn't stored, it's
     // derived per system from its stages (see deriveProjectStatus).
     prisma.aiSystem.findMany({
       where: activeFilter,
@@ -267,7 +267,7 @@ export default async function DashboardPage() {
         <div className={tileClass}>
           <h2 className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
             <ShieldAlert size={16} className="text-zinc-500" />
-            What is the risk of my AI systems?
+            Systems by risk tier
           </h2>
           <div className="mt-4 flex items-center gap-6">
             <RiskDonut segments={riskDonutSegments} total={totalActive} />
@@ -303,7 +303,7 @@ export default async function DashboardPage() {
 
         <div className={tileClass}>
           <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Are my AI systems on track?
+            Systems by review status
           </h2>
           <ul className="mt-4 flex flex-col gap-2.5">
             {projectStatusRows.map((row) => (
